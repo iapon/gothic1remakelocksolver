@@ -692,11 +692,9 @@ function loadRecipe(name) {
   const r = recipes[name];
   if (!r) return;
   numPlates = r.numPlates;
-  numPositions = r.numPositions;
-  center = r.center;
+  numPositions = r.numPositions || 7;
+  center = r.center !== undefined ? r.center : 3;
   document.getElementById('numPlates').value = numPlates;
-  document.getElementById('numPositions').value = numPositions;
-  document.getElementById('centerPos').value = center + 1;
   plates = r.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}));
   currentPins = plates.map(p => p.initPin);
   renderConfig();
@@ -779,11 +777,9 @@ function importRecipe(ev) {
     try {
       const data = JSON.parse(e.target.result);
       numPlates = data.numPlates;
-      numPositions = data.numPositions;
-      center = data.center;
+      numPositions = data.numPositions || 7;
+      center = data.center !== undefined ? data.center : 3;
       document.getElementById('numPlates').value = numPlates;
-      document.getElementById('numPositions').value = numPositions;
-      document.getElementById('centerPos').value = center + 1;
       plates = data.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e2 => ({...e2}))}));
       currentPins = plates.map(p => p.initPin);
       renderConfig();

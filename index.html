@@ -868,10 +868,10 @@ function setStatus(cls, msg) {
 }
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 2000);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 2000);
 }
 
 function showRecipeName(name) {
@@ -907,6 +907,187 @@ function loadPreset() {
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
   setStatus('idle', t('ready'));
+}
+
+// ---- Recipes (localStorage) ----
+function getRecipes() {
+  try { return JSON.parse(localStorage.getItem('lockRecipes') || '{}'); }
+  catch(e) { return {}; }
+}
+
+function saveRecipes(r) {
+  localStorage.setItem('lockRecipes', JSON.stringify(r));
+}
+
+function saveRecipe() {
+  const name = document.getElementById('recipeName').value.trim();
+  if (!name) { showToast(t('enter_name')); return; }
+  const recipes = getRecipes();
+  recipes[name] = {
+    numPlates, numPositions, center,
+    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
+  };
+  saveRecipes(recipes);
+  document.getElementById('recipeName').value = '';
+  renderRecipeList();
+  showToast(t('saved')(name));
+}
+
+function loadRecipe(name) {
+  const recipes = getRecipes();
+  const r = recipes[name];
+  if (!r) return;
+  numPlates = r.numPlates;
+  numPositions = r.numPositions || 7;
+  center = r.center !== undefined ? r.center : 3;
+  document.getElementById('numPlates').value = numPlates;
+  plates = r.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}));
+  currentPins = plates.map(p => p.initPin);
+  renderConfig();
+  renderVisual();
+  solution = null;
+  solutionStates = [];
+  document.getElementById('solutionBox').style.display = 'none';
+  showRecipeName(name);
+  setStatus('idle', t('loaded')(name));
+}
+
+function deleteRecipe(name) {
+  event.stopPropagation();
+  const recipes = getRecipes();
+  delete recipes[name];
+  saveRecipes(recipes);
+  renderRecipeList();
+  showToast(t('deleted')(name));
+}
+
+function renderRecipeList() {
+  filterRecipes();
+}
+
+function filterRecipes() {
+  const dropdown = document.getElementById('recipeDropdown');
+  const query = document.getElementById('recipeSearch').value.toLowerCase();
+  const recipes = getRecipes();
+  const names = Object.keys(recipes).sort();
+  const filtered = names.filter(n => n.toLowerCase().includes(query));
+
+  dropdown.innerHTML = '';
+  if (filtered.length === 0) {
+    dropdown.innerHTML = '<div class="search-empty">' + (names.length === 0 ? t('no_recipes') : t('no_matches')) + '</div>';
+  } else {
+    for (const name of filtered) {
+      const r = recipes[name];
+      const info = `${r.numPlates}P / ${r.numPositions}pos`;
+      const item = document.createElement('div');
+      item.className = 'search-item';
+      const safe = name.replace(/'/g, "\\'");
+      item.innerHTML = `<span class="si-name" onclick="loadRecipe('${safe}');closeDropdown()">${name}</span><span class="si-info">${info}</span><span class="si-del" onclick="event.stopPropagation();deleteRecipe('${safe}')">&#10006;</span>`;
+      dropdown.appendChild(item);
+    }
+  }
+}
+
+function openDropdown() {
+  document.getElementById('recipeDropdown').classList.add('open');
+}
+
+function closeDropdown() {
+  document.getElementById('recipeDropdown').classList.remove('open');
+  document.getElementById('recipeSearch').value = '';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) { closeDropdown(); closeCommunityDropdown(); }
+});
+
+function exportRecipe() {
+  const name = document.getElementById('recipeName').value.trim() || 'lock_recipe';
+  const data = {
+    name,
+    numPlates, numPositions, center,
+    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importRecipe(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      numPlates = data.numPlates;
+      numPositions = data.numPositions || 7;
+      center = data.center !== undefined ? data.center : 3;
+      document.getElementById('numPlates').value = numPlates;
+      plates = data.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e2 => ({...e2}))}));
+      currentPins = plates.map(p => p.initPin);
+      renderConfig();
+      renderVisual();
+      solution = null;
+      solutionStates = [];
+      document.getElementById('solutionBox').style.display = 'none';
+      if (data.name) document.getElementById('recipeName').value = data.name;
+      showRecipeName(data.name || '');
+      setStatus('idle', t('imported')(data.name || file.name));
+    } catch(err) {
+      showToast(t('invalid_file'));
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+function exportAllRecipes() {
+  const recipes = getRecipes();
+  const names = Object.keys(recipes);
+  if (names.length === 0) { showToast(t('no_export')); return; }
+  const blob = new Blob([JSON.stringify(recipes, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'all_recipes.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importAllRecipes(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const recipes = getRecipes();
+      let count = 0;
+      for (const [name, recipe] of Object.entries(data)) {
+        if (recipe.numPlates && recipe.plates) {
+          recipes[name] = recipe;
+          count++;
+        }
+      }
+      saveRecipes(recipes);
+      renderRecipeList();
+      showToast(t('imported_all')(count));
+    } catch(err) {
+      showToast(t('invalid_file'));
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+function resetAll() {
+  if (!confirm(t('reset_confirm'))) return;
+  loadPreset();
+  showRecipeName('');
+  renderRecipeList();
 }
 
 // Init
@@ -999,12 +1180,6 @@ function closeCommunityDropdown() {
   document.getElementById('communitySearch').value = '';
 }
 
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) {
-    closeDropdown();
-    closeCommunityDropdown();
-  }
-});
 </script>
 </body>
 </html>

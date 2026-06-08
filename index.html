@@ -434,9 +434,7 @@ function applyLang() {
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
   document.getElementById('communitySearch').placeholder = t('search_community');
-  renderConfig();
-  renderRecipeList();
-  filterCommunity();
+  if (plates.length) { renderConfig(); renderRecipeList(); filterCommunity(); }
 }
 
 function toggleLang() {

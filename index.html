@@ -922,6 +922,7 @@ function loadCommunityRecipe(id) {
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
   closeCommunityDropdown();
+}
 
 function openCommunityDropdown() {
   document.getElementById('communityDropdown').classList.add('open');
@@ -938,3 +939,6 @@ document.addEventListener('click', e => {
     closeCommunityDropdown();
   }
 });
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a4a7a"/>
+      <stop offset="100%" stop-color="#0f3460"/>
+    </linearGradient>
+    <linearGradient id="shackle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#b8960f"/>
+    </linearGradient>
+    <linearGradient id="hole" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+  <!-- shackle -->
+  <path d="M19 28 L19 18 Q19 6 32 6 Q45 6 45 18 L45 28" fill="none" stroke="url(#shackle)" stroke-width="5" stroke-linecap="round"/>
+  <!-- lock body -->
+  <rect x="11" y="27" width="42" height="32" rx="5" fill="url(#body)" stroke="#0a1e3a" stroke-width="2"/>
+  <!-- shine -->
+  <rect x="16" y="32" width="4" height="8" rx="2" fill="rgba(255,255,255,0.15)"/>
+  <!-- keyhole circle -->
+  <circle cx="32" cy="40" r="5" fill="url(#hole)"/>
+  <!-- keyhole slot -->
+  <rect x="30" y="40" width="4" height="9" rx="1.5" fill="url(#hole)"/>
+</svg>

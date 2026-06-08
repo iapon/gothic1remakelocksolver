@@ -107,6 +107,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .search-item .si-del:hover { color: #ff6b6b; }
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
 </style>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
 <div class="container">
@@ -116,15 +117,12 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <h2>&#9881; Configuration</h2>
     <div class="config-row">
       <label>Plates:</label>
-      <input type="number" id="numPlates" value="6" min="2" max="12">
+      <input type="number" id="numPlates" value="4" min="2" max="12">
       <label>Positions:</label>
-      <input type="number" id="numPositions" value="7" min="3" max="15">
+      <input type="number" id="numPositions" value="3" min="3" max="15">
       <label>Center:</label>
-      <input type="number" id="centerPos" value="4" min="1" max="15">
+      <input type="number" id="centerPos" value="2" min="1" max="15">
       <button class="btn btn-sm" onclick="rebuildConfig()">Apply</button>
-    </div>
-    <div class="preset-box">
-      <button class="preset-btn" onclick="loadPreset()">Load preset (original 6-plate puzzle)</button>
     </div>
     <div class="recipe-box">
       <label>Recipe:</label>
@@ -573,27 +571,26 @@ function showToast(msg) {
 }
 
 function loadPreset() {
-  numPlates = 6;
-  numPositions = 7;
-  center = 3;
-  document.getElementById('numPlates').value = 6;
-  document.getElementById('numPositions').value = 7;
-  document.getElementById('centerPos').value = center + 1;
+  numPlates = 4;
+  numPositions = 3;
+  center = 1; // 0-indexed, position 2 displayed
+  document.getElementById('numPlates').value = 4;
+  document.getElementById('numPositions').value = 3;
+  document.getElementById('centerPos').value = 2;
 
   plates = [
-    {initPin: 0, effects: [{target: 5, dir: 1}]},
-    {initPin: 5, effects: [{target: 2, dir: -1}, {target: 3, dir: 1}]},
     {initPin: 0, effects: []},
-    {initPin: 4, effects: [{target: 2, dir: 1}, {target: 5, dir: 1}]},
-    {initPin: 4, effects: [{target: 0, dir: 1}, {target: 3, dir: -1}]},
-    {initPin: 5, effects: [{target: 0, dir: 1}, {target: 1, dir: -1}]},
+    {initPin: 0, effects: []},
+    {initPin: 0, effects: []},
+    {initPin: 0, effects: []},
   ];
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
   solution = null;
+  solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
-  setStatus('idle', 'Preset loaded. Click "Find Solution" to solve.');
+  setStatus('idle', 'Ready');
 }
 
 // ---- Recipes (localStorage) ----

@@ -900,7 +900,7 @@ function filterCommunity() {
       const info = `${r.numPlates}P / ${r.numPositions}pos`;
       const safe = (r.name || '').replace(/'/g, "\\'");
       const rid = r.id;
-      item.innerHTML = `<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span><span class="si-del" onclick="event.stopPropagation();deleteCommunityRecipe('${rid}')" title="Report">&#9888;</span>`;
+      item.innerHTML = `<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span>`;
       dropdown.appendChild(item);
     }
   }
@@ -922,20 +922,6 @@ function loadCommunityRecipe(id) {
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
   closeCommunityDropdown();
-  setStatus('idle', `Loaded: ${r.name}`);
-}
-
-async function deleteCommunityRecipe(id) {
-  event.stopPropagation();
-  if (!confirm('Report this recipe?')) return;
-  try {
-    await db.collection('recipes').doc(id).delete();
-    showToast('Recipe removed');
-    loadCommunity();
-  } catch(e) {
-    showToast('Error removing');
-  }
-}
 
 function openCommunityDropdown() {
   document.getElementById('communityDropdown').classList.add('open');

@@ -1,9 +1,41 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lock Pick Solver</title>
+<title>Gothic 1 Remake Lock Pick Solver — Chest Opener</title>
+<meta name="description" content="Free online lock pick solver for Gothic 1 Remake. Configure plates, pins and effects, get the shortest solution instantly. BFS algorithm, step-by-step visual guide, community recipes.">
+<meta name="keywords" content="Gothic 1 Remake, lock pick solver, lockpicking, chest opener, minigame, puzzle solver, Gothic Remake, lockpick, chest lock, BFS solver">
+<meta name="author" content="iapon">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://iapon.github.io/gothic1remakelocksolver/">
+<link rel="alternate" hreflang="ru" href="https://iapon.github.io/gothic1remakelocksolver/?lang=ru">
+<link rel="alternate" hreflang="en" href="https://iapon.github.io/gothic1remakelocksolver/">
+
+<meta property="og:title" content="Gothic 1 Remake Lock Pick Solver — Chest Opener">
+<meta property="og:description" content="Free online tool that solves the lock picking minigame in Gothic 1 Remake. Set up your puzzle, hit solve, follow the steps.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://iapon.github.io/gothic1remakelocksolver/">
+<meta property="og:image" content="https://iapon.github.io/gothic1remakelocksolver/favicon.svg">
+<meta property="og:site_name" content="Gothic 1 Remake Lock Pick Solver">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Gothic 1 Remake Lock Pick Solver">
+<meta name="twitter:description" content="Free online tool that solves the lock picking minigame. Configure, solve, open chests.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Gothic 1 Remake Lock Pick Solver",
+  "url": "https://iapon.github.io/gothic1remakelocksolver/",
+  "description": "Free online lock pick solver for Gothic 1 Remake. BFS algorithm finds the shortest solution for any lock configuration.",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "inLanguage": ["en", "ru"]
+}
+</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; min-height: 100vh; padding: 20px; }
@@ -142,88 +174,88 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .search-item .si-del { color: #e74c3c; font-size: 14px; padding: 0 4px; margin-left: 8px; }
 .search-item .si-del:hover { color: #ff6b6b; }
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
+.lang-btn { position: absolute; top: 20px; right: 20px; background: #0f3460; border: 1px solid #1a4a7a; color: #8ecae6; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+.lang-btn:hover { border-color: #00d4ff; color: #00d4ff; }
 </style>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
+<button class="lang-btn" id="langBtn" onclick="toggleLang()">RU</button>
 <div class="container">
-  <h1>&#128274; Lock Pick Solver</h1>
+  <h1 id="t_title">&#128274; Lock Pick Solver</h1>
 
   <div class="panel">
-    <h2>&#9881; Configuration</h2>
+    <h2 id="t_config">&#9881; Configuration</h2>
     <div class="config-row">
-      <label>Plates:</label>
+      <label id="t_plates_label">Plates:</label>
       <select id="numPlates" onchange="rebuildConfig()">
-        <option value="3">3</option>
-        <option value="4" selected>4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7">7</option>
-        <option value="8">8</option>
+        <option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
       </select>
-      <button class="btn btn-sm btn-danger" onclick="resetAll()">Reset All</button>
+      <button class="btn btn-sm btn-danger" onclick="resetAll()" id="t_reset_all">Reset All</button>
     </div>
     <div class="recipe-box">
-      <label>Recipe:</label>
+      <label id="t_recipe">Recipe:</label>
       <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
-      <button class="btn btn-sm" onclick="saveRecipe()">Save</button>
-      <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; Share</button>
+      <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
+      <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
       <div class="search-wrap">
         <span class="search-icon">&#128269;</span>
         <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
         <div class="search-dropdown" id="recipeDropdown"></div>
       </div>
-      <button class="btn btn-sm" onclick="exportRecipe()">&#11015; Download</button>
-      <label class="btn btn-sm" style="cursor:pointer;">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
+      <button class="btn btn-sm" onclick="exportRecipe()" id="t_download">&#11015; Download</button>
+      <label class="btn btn-sm" style="cursor:pointer;" id="t_upload">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
       <span style="color:#444;">|</span>
-      <button class="btn btn-sm" onclick="exportAllRecipes()">&#11015; All</button>
-      <label class="btn btn-sm" style="cursor:pointer;">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
+      <button class="btn btn-sm" onclick="exportAllRecipes()" id="t_download_all">&#11015; All</button>
+      <label class="btn btn-sm" style="cursor:pointer;" id="t_upload_all">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
     </div>
     <div class="recipe-box" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;">
-      <label style="color:#0f0;">&#127760; Community:</label>
+      <label style="color:#0f0;">&#127760; <span id="t_community">Community</span>:</label>
       <div class="search-wrap">
         <span class="search-icon">&#128269;</span>
         <input type="text" class="search-input" id="communitySearch" placeholder="Search community..." oninput="filterCommunity()" onfocus="openCommunityDropdown()" onclick="event.stopPropagation()">
         <div class="search-dropdown" id="communityDropdown"></div>
       </div>
-      <button class="btn btn-sm" onclick="loadCommunity()">&#8635; Refresh</button>
+      <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
     </div>
   </div>
 
   <div class="panel">
     <div style="display:flex;align-items:center;gap:12px;">
-      <h2 style="margin:0;">&#128260; Plates</h2>
+      <h2 style="margin:0;" id="t_plates">&#128260; Plates</h2>
       <span id="currentRecipeName" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
     </div>
     <div id="plateConfig" class="plate-list"></div>
   </div>
 
   <div class="panel">
-    <h2>&#128269; Solve</h2>
+    <h2 id="t_solve">&#128269; Solve</h2>
     <div class="controls">
-      <button class="btn" onclick="solve()">&#9654; Find Solution</button>
-      <button class="btn" onclick="resetToInitial()">&#8634; Reset to Initial</button>
-      <button class="btn" id="autoPlayBtn" onclick="toggleAutoPlay()">&#9658; Auto Play</button>
-      <label style="color:#8ecae6;font-size:12px;">Speed:</label>
+      <button class="btn" onclick="solve()" id="t_find">&#9654; Find Solution</button>
+      <button class="btn" onclick="resetToInitial()" id="t_reset">&#8634; Reset to Initial</button>
+      <button class="btn" id="autoPlayBtn" onclick="toggleAutoPlay()">&#9658; <span id="t_autoplay">Auto Play</span></button>
+      <label style="color:#8ecae6;font-size:12px;" id="t_speed">Speed:</label>
       <select id="autoSpeed" class="speed-select" onchange="updateSpeed()">
-        <option value="3000">0.25x</option>
-        <option value="2000">0.5x</option>
-        <option value="1200" selected>1x</option>
-        <option value="600">2x</option>
-        <option value="300">4x</option>
+        <option value="3000">0.25x</option><option value="2000">0.5x</option><option value="1200" selected>1x</option><option value="600">2x</option><option value="300">4x</option>
       </select>
       <button class="btn" onclick="stepBack()">&#9664;</button>
       <span id="stepCounter" class="step-counter">— / —</span>
       <span id="stepMove" class="step-move"></span>
       <button class="btn" onclick="stepForward()">&#9654;</button>
     </div>
-    <div id="status" class="status idle">Ready</div>
+    <div id="status" class="status idle" id="t_status_text">Ready</div>
     <div id="plateVisual"></div>
     <div id="solutionBox" class="solution-box" style="display:none"></div>
   </div>
 
   <div class="donate">
-    <button class="donate-btn" onclick="toggleDonate()">&#9749; Buy me a coffee</button>
+    <button class="donate-btn" onclick="toggleDonate()" id="t_coffee">&#9749; Buy me a coffee</button>
+  </div>
+
+  <div class="seo-text" id="seoText">
+    <h2>Gothic 1 Remake Chest Opener / Взлом замков Gothic 1 Remake</h2>
+    <p>A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.</p>
+    <p>Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции пинов и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех пинов по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.</p>
   </div>
 </div>
 <div class="donate-overlay" id="donateOverlay" onclick="toggleDonate()"></div>
@@ -265,6 +297,154 @@ const db = firebase.firestore();
 
 let communityRecipes = [];
 
+let lang = localStorage.getItem('lockLang') || 'en';
+
+const i18n = {
+  en: {
+    title: '\u{1F512} Lock Pick Solver',
+    config: '\u2699 Configuration',
+    plates_label: 'Plates:',
+    reset_all: 'Reset All',
+    recipe: 'Recipe:',
+    recipe_ph: 'Recipe name...',
+    save: 'Save',
+    share: 'Share',
+    search_local: 'Search local...',
+    download: '\u2B07 Download',
+    upload: '\u2B06 Upload',
+    download_all: '\u2B07 All',
+    upload_all: '\u2B06 All',
+    community: 'Community',
+    search_community: 'Search community...',
+    refresh: '\u21BB Refresh',
+    plates: '\u{1F504} Plates',
+    solve: '\u{1F50D} Solve',
+    find: '\u25B6 Find Solution',
+    reset: '\u21BA Reset to Initial',
+    autoplay: 'Auto Play',
+    speed: 'Speed:',
+    coffee: '\u2615 Buy me a coffee',
+    pin: 'Pin',
+    moves: 'moves',
+    self: 'self',
+    same: '\u2192 Same',
+    opposite: '\u2190 Opposite',
+    dash: '\u2014',
+    left: 'left',
+    right: 'right',
+    done: '\u2714 Done',
+    ready: 'Ready',
+    solving: '\u23F3 Solving... (BFS)',
+    at_goal: '\u2714 Already at goal!',
+    no_solution: '\u26A0 No solution exists with these constraints!',
+    solution_found: (n) => `\u2714 Solution found: ${n} moves`,
+    all_pins: '\u2714 ALL PINS AT CENTER! Lock picked!',
+    reset_pos: 'Reset to initial positions',
+    enter_name: 'Enter a recipe name',
+    saved: (n) => `Saved: ${n}`,
+    loaded: (n) => `Loaded: ${n}`,
+    deleted: (n) => `Deleted: ${n}`,
+    imported: (n) => `Imported: ${n}`,
+    no_recipes: 'No saved recipes',
+    no_matches: 'No matches',
+    no_community: 'No community recipes yet',
+    enter_first: 'Enter a recipe name first',
+    exists: (n) => `"${n}" already exists in community`,
+    shared: (n) => `Shared: ${n}`,
+    share_err: 'Error sharing recipe',
+    no_export: 'No recipes to export',
+    imported_all: (n) => `Imported ${n} recipes`,
+    invalid_file: 'Invalid file',
+    copied: 'Address copied!',
+    reset_confirm: 'Reset all settings to defaults?',
+    cant_go: (n) => `Plate ${n} can't go further!`,
+    would_go: (n) => `Plate ${n} would go out of bounds!`,
+    address_copied: 'Address copied!',
+  },
+  ru: {
+    title: '\u{1F512} Вскрытие Замков',
+    config: '\u2699 Настройка',
+    plates_label: 'Пластины:',
+    reset_all: 'Сбросить всё',
+    recipe: 'Рецепт:',
+    recipe_ph: 'Имя рецепта...',
+    save: 'Сохранить',
+    share: 'Поделиться',
+    search_local: 'Поиск локальных...',
+    download: '\u2B07 Скачать',
+    upload: '\u2B06 Загрузить',
+    download_all: '\u2B07 Все',
+    upload_all: '\u2B06 Все',
+    community: 'Сообщество',
+    search_community: 'Поиск в сообществе...',
+    refresh: '\u21BB Обновить',
+    plates: '\u{1F504} Пластины',
+    solve: '\u{1F50D} Решение',
+    find: '\u25B6 Найти решение',
+    reset: '\u21BA Сбросить позиции',
+    autoplay: 'Автоплей',
+    speed: 'Скорость:',
+    coffee: '\u2615 Угостить кофе',
+    pin: 'Пин',
+    moves: 'ходит',
+    self: '—',
+    same: '\u2192 Туда же',
+    opposite: '\u2190 Обратно',
+    dash: '\u2014',
+    left: 'влево',
+    right: 'вправо',
+    done: '\u2714 Готово',
+    ready: 'Готово',
+    solving: '\u23F3 Решаю... (BFS)',
+    at_goal: '\u2714 Уже решено!',
+    no_solution: '\u26A0 Решения не существует!',
+    solution_found: (n) => `\u2714 Решение найдено: ${n} ходов`,
+    all_pins: '\u2714 ВСЕ ПИНЫ В ЦЕНТРЕ! Замок вскрыт!',
+    reset_pos: 'Сбросить до начальных позиций',
+    enter_name: 'Введите имя рецепта',
+    saved: (n) => `Сохранено: ${n}`,
+    loaded: (n) => `Загружено: ${n}`,
+    deleted: (n) => `Удалено: ${n}`,
+    imported: (n) => `Импортировано: ${n}`,
+    no_recipes: 'Нет сохранённых рецептов',
+    no_matches: 'Ничего не найдено',
+    no_community: 'Пока нет рецептов сообщества',
+    enter_first: 'Сначала введите имя рецепта',
+    exists: (n) => `"${n}" уже есть в сообществе`,
+    shared: (n) => `Опубликовано: ${n}`,
+    share_err: 'Ошибка при публикации',
+    no_export: 'Нет рецептов для экспорта',
+    imported_all: (n) => `Импортировано ${n} рецептов`,
+    invalid_file: 'Неверный файл',
+    copied: 'Адрес скопирован!',
+    reset_confirm: 'Сбросить все настройки?',
+    cant_go: (n) => `Пластина ${n} дальше не идёт!`,
+    would_go: (n) => `Пластина ${n} выйдет за границы!`,
+    address_copied: 'Адрес скопирован!',
+  }
+};
+
+function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all'];
+  ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
+  document.getElementById('recipeName').placeholder = t('recipe_ph');
+  document.getElementById('recipeSearch').placeholder = t('search_local');
+  document.getElementById('communitySearch').placeholder = t('search_community');
+  renderConfig();
+  renderRecipeList();
+  filterCommunity();
+}
+
+function toggleLang() {
+  lang = lang === 'en' ? 'ru' : 'en';
+  localStorage.setItem('lockLang', lang);
+  applyLang();
+}
+
 let numPlates = 6;
 let numPositions = 7;
 let center = 3;
@@ -294,7 +474,7 @@ function rebuildConfig() {
   renderVisual();
   solution = null;
   document.getElementById('solutionBox').style.display = 'none';
-  setStatus('idle', 'Ready');
+  setStatus('idle', t('ready'));
 }
 
 function renderConfig() {
@@ -310,7 +490,7 @@ function renderConfig() {
   html += '</tr>';
 
   // Pin row
-  html += '<tr class="pin-row-sep"><th class="row-header">Pin</th>';
+  html += `<tr class="pin-row-sep"><th class="row-header">${t('pin')}</th>`;
   for (let j = 0; j < numPlates; j++) {
     const opts = Array.from({length: numPositions}, (_, k) => `<option value="${k+1}" ${k === plates[j].initPin ? 'selected' : ''}>${k+1}</option>`).join('');
     html += `<td><select class="grid-select pin-grid-select" onchange="updatePin(${j}, this.value)">${opts}</select></td>`;
@@ -319,18 +499,18 @@ function renderConfig() {
 
   // Effects rows
   for (let i = 0; i < numPlates; i++) {
-    html += `<tr><th class="row-header">P${i+1} moves</th>`;
+    html += `<tr><th class="row-header">P${i+1} ${t('moves')}</th>`;
     for (let j = 0; j < numPlates; j++) {
       if (i === j) {
-        html += '<td class="diag" style="color:#333;font-size:10px;">self</td>';
+        html += `<td class="diag" style="color:#333;font-size:10px;">${t('self')}</td>`;
         continue;
       }
       const eff = plates[i].effects.find(e => e.target === j);
       const val = eff ? (eff.dir === 1 ? 'same' : 'opposite') : 'none';
       html += `<td><select class="grid-select" onchange="updateGridEffect(${i},${j},this.value)">
-        <option value="none" ${val==='none'?'selected':''}>&#8212;</option>
-        <option value="same" ${val==='same'?'selected':''}>&#8594; Same</option>
-        <option value="opposite" ${val==='opposite'?'selected':''}>&#8592; Opp</option>
+        <option value="none" ${val==='none'?'selected':''}>${t('dash')}</option>
+        <option value="same" ${val==='same'?'selected':''}>${t('same')}</option>
+        <option value="opposite" ${val==='opposite'?'selected':''}>${t('opposite')}</option>
       </select></td>`;
     }
     html += '</tr>';
@@ -427,14 +607,14 @@ function manualMove(plateIdx, direction) {
   let newState = [...currentPins];
   newState[plateIdx] += direction;
   if (newState[plateIdx] < 0 || newState[plateIdx] >= numPositions) {
-    showToast(`Plate ${plateIdx+1} can't go further!`);
+    showToast(t('cant_go')(plateIdx+1));
     return;
   }
   for (const eff of plates[plateIdx].effects) {
     if (eff.target === plateIdx) continue;
     newState[eff.target] += direction * eff.dir;
     if (newState[eff.target] < 0 || newState[eff.target] >= numPositions) {
-      showToast(`Plate ${eff.target+1} would go out of bounds!`);
+      showToast(t('would_go')(eff.target+1));
       return;
     }
   }
@@ -459,7 +639,7 @@ function stateKey(s) { return s.join(','); }
 
 function solve() {
   if (autoPlayId) toggleAutoPlay();
-  setStatus('solving', '&#8987; Solving... (BFS)');
+    setStatus('solving', t('solving'));
   setTimeout(() => {
     const init = plates.map(p => p.initPin);
     const goal = Array(numPlates).fill(center);
@@ -467,7 +647,7 @@ function solve() {
 
     if (stateKey(init) === stateKey(goal)) {
       solution = [];
-      setStatus('found', '&#10004; Already at goal!');
+      setStatus('found', t('at_goal'));
       renderSolution();
       return;
     }
@@ -486,7 +666,7 @@ function solve() {
             if (ns === null) continue;
             const nk = stateKey(ns);
             if (parent.has(nk)) continue;
-            const dirStr = d === 1 ? 'left' : 'right';
+            const dirStr = d === 1 ? t('left') : t('right');
             parent.set(nk, {prev: stateKey(state), move: `Plate ${p+1} ${dirStr}`, plate: p, dir: d});
             if (nk === stateKey(goal)) {
               found = nk;
@@ -503,7 +683,7 @@ function solve() {
     }
 
     if (!found) {
-      setStatus('nosolution', '&#9888; No solution exists with these constraints!');
+      setStatus('nosolution', t('no_solution'));
       solution = null;
       return;
     }
@@ -520,7 +700,7 @@ function solve() {
     stepIndex = 0;
     currentPins = [...init];
     renderVisual();
-    setStatus('found', `&#10004; Solution found: ${path.length} moves`);
+    setStatus('found', t('solution_found')(path.length));
     renderSolution();
   }, 50);
 }
@@ -654,7 +834,7 @@ function updateStepCounter() {
     if (stepIndex < solution.length) {
       mv.textContent = `\u2192 ${solution[stepIndex].desc}`;
     } else {
-      mv.textContent = `\u2714 Done`;
+      mv.textContent = t('done');
     }
   }
 }
@@ -669,12 +849,12 @@ function resetToInitial() {
   renderVisual();
   if (solution) highlightMove();
   else updateStepCounter();
-  setStatus('idle', 'Reset to initial positions');
+  setStatus('idle', t('reset_pos'));
 }
 
 function checkGoal() {
   if (currentPins.every(p => p === center)) {
-    setStatus('found', '&#10004; ALL PINS AT CENTER! Lock picked!');
+    setStatus('found', t('all_pins'));
   }
 }
 
@@ -702,7 +882,7 @@ function toggleDonate() {
 
 function copyAddr(id) {
   const text = document.getElementById(id).textContent;
-  navigator.clipboard.writeText(text).then(() => showToast('Address copied!'));
+  navigator.clipboard.writeText(text).then(() => showToast(t('copied')));
 }
 
 function loadPreset() {
@@ -723,191 +903,11 @@ function loadPreset() {
   solution = null;
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
-  setStatus('idle', 'Ready');
-}
-
-// ---- Recipes (localStorage) ----
-function getRecipes() {
-  try { return JSON.parse(localStorage.getItem('lockRecipes') || '{}'); }
-  catch(e) { return {}; }
-}
-
-function saveRecipes(r) {
-  localStorage.setItem('lockRecipes', JSON.stringify(r));
-}
-
-function saveRecipe() {
-  const name = document.getElementById('recipeName').value.trim();
-  if (!name) { showToast('Enter a recipe name'); return; }
-  const recipes = getRecipes();
-  recipes[name] = {
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
-  };
-  saveRecipes(recipes);
-  document.getElementById('recipeName').value = '';
-  renderRecipeList();
-  showToast(`Saved: ${name}`);
-}
-
-function loadRecipe(name) {
-  const recipes = getRecipes();
-  const r = recipes[name];
-  if (!r) return;
-  numPlates = r.numPlates;
-  numPositions = r.numPositions || 7;
-  center = r.center !== undefined ? r.center : 3;
-  document.getElementById('numPlates').value = numPlates;
-  plates = r.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}));
-  currentPins = plates.map(p => p.initPin);
-  renderConfig();
-  renderVisual();
-  solution = null;
-  solutionStates = [];
-  document.getElementById('solutionBox').style.display = 'none';
-  showRecipeName(name);
-  setStatus('idle', `Loaded: ${name}`);
-}
-
-function deleteRecipe(name) {
-  event.stopPropagation();
-  const recipes = getRecipes();
-  delete recipes[name];
-  saveRecipes(recipes);
-  renderRecipeList();
-  showToast(`Deleted: ${name}`);
-}
-
-function renderRecipeList() {
-  filterRecipes();
-}
-
-function filterRecipes() {
-  const dropdown = document.getElementById('recipeDropdown');
-  const query = document.getElementById('recipeSearch').value.toLowerCase();
-  const recipes = getRecipes();
-  const names = Object.keys(recipes).sort();
-  const filtered = names.filter(n => n.toLowerCase().includes(query));
-
-  dropdown.innerHTML = '';
-  if (filtered.length === 0) {
-    dropdown.innerHTML = '<div class="search-empty">' + (names.length === 0 ? 'No saved recipes' : 'No matches') + '</div>';
-  } else {
-    for (const name of filtered) {
-      const r = recipes[name];
-      const info = `${r.numPlates}P / ${r.numPositions}pos`;
-      const item = document.createElement('div');
-      item.className = 'search-item';
-      const safe = name.replace(/'/g, "\\'");
-      item.innerHTML = `<span class="si-name" onclick="loadRecipe('${safe}');closeDropdown()">${name}</span><span class="si-info">${info}</span><span class="si-del" onclick="event.stopPropagation();deleteRecipe('${safe}')">&#10006;</span>`;
-      dropdown.appendChild(item);
-    }
-  }
-}
-
-function openDropdown() {
-  document.getElementById('recipeDropdown').classList.add('open');
-}
-
-function closeDropdown() {
-  document.getElementById('recipeDropdown').classList.remove('open');
-  document.getElementById('recipeSearch').value = '';
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) closeDropdown();
-});
-
-function exportRecipe() {
-  const name = document.getElementById('recipeName').value.trim() || 'lock_recipe';
-  const data = {
-    name,
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function importRecipe(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      numPlates = data.numPlates;
-      numPositions = data.numPositions || 7;
-      center = data.center !== undefined ? data.center : 3;
-      document.getElementById('numPlates').value = numPlates;
-      plates = data.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e2 => ({...e2}))}));
-      currentPins = plates.map(p => p.initPin);
-      renderConfig();
-      renderVisual();
-      solution = null;
-      solutionStates = [];
-      document.getElementById('solutionBox').style.display = 'none';
-      if (data.name) document.getElementById('recipeName').value = data.name;
-      showRecipeName(data.name || '');
-      setStatus('idle', `Imported: ${data.name || file.name}`);
-    } catch(err) {
-      showToast('Invalid file');
-    }
-  };
-  reader.readAsText(file);
-  ev.target.value = '';
-}
-
-function exportAllRecipes() {
-  const recipes = getRecipes();
-  const names = Object.keys(recipes);
-  if (names.length === 0) { showToast('No recipes to export'); return; }
-  const blob = new Blob([JSON.stringify(recipes, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'all_recipes.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function importAllRecipes(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      const recipes = getRecipes();
-      let count = 0;
-      for (const [name, recipe] of Object.entries(data)) {
-        if (recipe.numPlates && recipe.plates) {
-          recipes[name] = recipe;
-          count++;
-        }
-      }
-      saveRecipes(recipes);
-      renderRecipeList();
-      showToast(`Imported ${count} recipes`);
-    } catch(err) {
-      showToast('Invalid file');
-    }
-  };
-  reader.readAsText(file);
-  ev.target.value = '';
-}
-
-function resetAll() {
-  if (!confirm('Reset all settings to defaults?')) return;
-  loadPreset();
-  showRecipeName('');
-  renderRecipeList();
+  setStatus('idle', t('ready'));
 }
 
 // Init
+applyLang();
 loadPreset();
 renderRecipeList();
 loadCommunity();
@@ -925,10 +925,10 @@ async function loadCommunity() {
 
 async function submitToCommunity() {
   const name = document.getElementById('recipeName').value.trim();
-  if (!name) { showToast('Enter a recipe name first'); return; }
+  if (!name) { showToast(t('enter_first')); return; }
 
   const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
-  if (existing) { showToast(`"${name}" already exists in community`); return; }
+  if (existing) { showToast(t('exists')(name)); return; }
 
   const data = {
     name,
@@ -939,10 +939,10 @@ async function submitToCommunity() {
 
   try {
     await db.collection('recipes').add(data);
-    showToast(`Shared: ${name}`);
+    showToast(t('shared')(name));
     loadCommunity();
   } catch(e) {
-    showToast('Error sharing recipe');
+    showToast(t('share_err'));
     console.error(e);
   }
 }
@@ -954,7 +954,7 @@ function filterCommunity() {
 
   dropdown.innerHTML = '';
   if (filtered.length === 0) {
-    dropdown.innerHTML = '<div class="search-empty">' + (communityRecipes.length === 0 ? 'No community recipes yet' : 'No matches') + '</div>';
+    dropdown.innerHTML = '<div class="search-empty">' + (communityRecipes.length === 0 ? t('no_community') : t('no_matches')) + '</div>';
   } else {
     for (const r of filtered) {
       const item = document.createElement('div');

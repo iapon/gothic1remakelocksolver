@@ -13,8 +13,8 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .panel h2 { color: #00d4ff; margin-bottom: 15px; font-size: 1.1em; }
 
 .config-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.config-row label { min-width: 120px; color: #8ecae6; }
-.config-row input, .config-row select { background: #0f3460; border: 1px solid #1a4a7a; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 14px; }
+.config-row label { min-width: 50px; color: #8ecae6; display: flex; align-items: center; }
+.config-row select, .config-row input { background: #0f3460; border: 1px solid #1a4a7a; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 14px; }
 .config-row input[type="number"] { width: 70px; }
 
 .btn { background: linear-gradient(135deg, #0f3460, #1a4a7a); border: 1px solid #00d4ff; color: #00d4ff; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s; }
@@ -50,7 +50,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .status.error { background: #3a0a0a; color: #f44; }
 .status.nosolution { background: #3a2a0a; color: #fa0; }
 
-.controls { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.controls { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
 
 .btn-group { display: flex; gap: 4px; }
 .btn-dir { padding: 4px 10px; font-size: 12px; min-width: 35px; }
@@ -119,12 +119,14 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <h2>&#9881; Configuration</h2>
     <div class="config-row">
       <label>Plates:</label>
-      <input type="number" id="numPlates" value="4" min="2" max="12">
-      <label>Positions:</label>
-      <input type="number" id="numPositions" value="7" min="3" max="15">
-      <label>Center:</label>
-      <input type="number" id="centerPos" value="4" min="1" max="15">
-      <button class="btn btn-sm" onclick="rebuildConfig()">Apply</button>
+      <select id="numPlates" onchange="rebuildConfig()">
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
       <button class="btn btn-sm btn-danger" onclick="resetAll()">Reset All</button>
     </div>
     <div class="recipe-box">
@@ -187,10 +189,8 @@ let autoPlayId = null;
 
 function rebuildConfig() {
   numPlates = parseInt(document.getElementById('numPlates').value);
-  numPositions = parseInt(document.getElementById('numPositions').value);
-  center = parseInt(document.getElementById('centerPos').value) - 1; // 1-indexed input -> 0-indexed internal
-  if (center < 0 || center >= numPositions) center = Math.floor(numPositions / 2);
-  document.getElementById('centerPos').value = center + 1;
+  numPositions = 7;
+  center = 3;
 
   // Preserve existing config if possible
   let old = plates;
@@ -620,10 +620,8 @@ function showToast(msg) {
 function loadPreset() {
   numPlates = 4;
   numPositions = 7;
-  center = 3; // 0-indexed, position 4 displayed
+  center = 3;
   document.getElementById('numPlates').value = 4;
-  document.getElementById('numPositions').value = 7;
-  document.getElementById('centerPos').value = 4;
 
   plates = [
     {initPin: 0, effects: []},

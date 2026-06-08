@@ -157,7 +157,10 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
   </div>
 
   <div class="panel">
-    <h2>&#128260; Plates &mdash; Initial Pin Positions &amp; Effects</h2>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <h2 style="margin:0;">&#128260; Plates</h2>
+      <span id="currentRecipeName" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
+    </div>
     <div id="plateConfig" class="plate-list"></div>
   </div>
 
@@ -642,6 +645,10 @@ function showToast(msg) {
   setTimeout(() => t.style.display = 'none', 2000);
 }
 
+function showRecipeName(name) {
+  document.getElementById('currentRecipeName').textContent = name ? `\u2022 ${name}` : '';
+}
+
 function loadPreset() {
   numPlates = 4;
   numPositions = 7;
@@ -702,6 +709,7 @@ function loadRecipe(name) {
   solution = null;
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
+  showRecipeName(name);
   setStatus('idle', `Loaded: ${name}`);
 }
 
@@ -788,6 +796,7 @@ function importRecipe(ev) {
       solutionStates = [];
       document.getElementById('solutionBox').style.display = 'none';
       if (data.name) document.getElementById('recipeName').value = data.name;
+      showRecipeName(data.name || '');
       setStatus('idle', `Imported: ${data.name || file.name}`);
     } catch(err) {
       showToast('Invalid file');
@@ -838,6 +847,7 @@ function importAllRecipes(ev) {
 function resetAll() {
   if (!confirm('Reset all settings to defaults?')) return;
   loadPreset();
+  showRecipeName('');
   renderRecipeList();
 }
 
@@ -917,6 +927,7 @@ function loadCommunityRecipe(id) {
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
+  showRecipeName(r.name);
   closeCommunityDropdown();
 }
 

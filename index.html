@@ -93,8 +93,27 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 
 .pin-input { width: 50px; text-align: center; font-size: 16px; padding: 8px; background: #0f3460; border: 2px solid #1a4a7a; color: #ffd700; border-radius: 8px; font-weight: bold; }
 
-.plate-pins-config { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.plate-pins-config { display: flex; align-items: center; gap: 8px; }
 .plate-pins-config span { font-size: 12px; color: #8ecae6; }
+
+.effects-grid { margin-top: 15px; overflow-x: auto; }
+.effects-table { border-collapse: collapse; font-size: 12px; width: 100%; table-layout: fixed; }
+.effects-table th, .effects-table td { padding: 6px 4px; text-align: center; }
+.effects-table th { color: #ffd700; font-weight: 600; font-size: 11px; }
+.effects-table th.row-header { color: #8ecae6; }
+.effects-table td { border: 1px solid rgba(255,255,255,0.06); }
+.effects-table td.diag { background: rgba(0,0,0,0.2); }
+.pin-grid-select { background: #0f3460 !important; border-color: #ffd700 !important; color: #ffd700 !important; font-weight: bold; font-size: 14px !important; }
+.pin-row-sep td, .pin-row-sep th { border-bottom: 2px solid #ffd70055 !important; padding-bottom: 10px !important; }
+.effects-table tr:nth-child(3) td, .effects-table tr:nth-child(3) th { padding-top: 10px !important; }
+.grid-select { background: #0a0a1a; border: 1px solid #333; color: #e0e0e0; padding: 4px 2px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%; }
+.grid-select:focus { outline: none; border-color: #00d4ff; }
+.grid-select option { background: #0a0a1a; }
+
+.pins-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.pin-chip { display: flex; align-items: center; gap: 4px; background: #0f3460; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+.pin-chip label { color: #ffd700; font-weight: 600; }
+.pin-chip select { background: #0a0a1a; border: 1px solid #333; color: #00d4ff; padding: 2px 6px; border-radius: 4px; font-size: 14px; font-weight: bold; width: 40px; text-align: center; }
 
 .move-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
 .move-row.current { background: rgba(0,212,255,0.15); border-radius: 6px; }
@@ -281,53 +300,51 @@ function rebuildConfig() {
 function renderConfig() {
   const container = document.getElementById('plateConfig');
   container.innerHTML = '';
-  for (let i = 0; i < numPlates; i++) {
-    const row = document.createElement('div');
-    row.className = 'plate-row';
 
-    // Plate name
-    const name = document.createElement('div');
-    name.className = 'plate-name';
-    name.textContent = `Plate ${i+1}`;
-    row.appendChild(name);
-
-    // Initial pin position
-    const pinDiv = document.createElement('div');
-    pinDiv.className = 'plate-pins-config';
-    const opts = Array.from({length: numPositions}, (_, k) => `<option value="${k+1}" ${k === plates[i].initPin ? 'selected' : ''}>${k+1}</option>`).join('');
-    pinDiv.innerHTML = `<span>Pin:</span><select class="pin-input" onchange="updatePin(${i}, this.value)">${opts}</select>`;
-    row.appendChild(pinDiv);
-
-    // Effects
-    for (let j = 0; j < plates[i].effects.length; j++) {
-      const eff = plates[i].effects[j];
-      const item = document.createElement('div');
-      item.className = 'effect-item';
-      item.innerHTML = `&#8594;
-        <select onchange="updateEffect(${i},${j},'target',this.value)">
-          ${Array.from({length:numPlates},(_,k)=>`<option value="${k}" ${k===eff.target?'selected':''}>Plate ${k+1}</option>`).join('')}
-        </select>
-        <select onchange="updateEffect(${i},${j},'dir',this.value)">
-          <option value="1" ${eff.dir==1?'selected':''}>Same</option>
-          <option value="-1" ${eff.dir==-1?'selected':''}>Opposite</option>
-        </select>
-        <span class="remove-eff" onclick="removeEffect(${i},${j})">&#10006;</span>
-      `;
-      row.appendChild(item);
-    }
-
-    // Add effect button
-    const addBtn = document.createElement('button');
-    addBtn.className = 'btn btn-sm';
-    addBtn.textContent = '+ Effect';
-    addBtn.onclick = () => {
-      plates[i].effects.push({target: 0, dir: 1});
-      renderConfig();
-    };
-    row.appendChild(addBtn);
-
-    container.appendChild(row);
+  const gridDiv = document.createElement('div');
+  gridDiv.className = 'effects-grid';
+  let html = '<table class="effects-table"><tr><th></th>';
+  for (let j = 0; j < numPlates; j++) {
+    html += `<th>P${j+1}</th>`;
   }
+  html += '</tr>';
+
+  // Pin row
+  html += '<tr class="pin-row-sep"><th class="row-header">Pin</th>';
+  for (let j = 0; j < numPlates; j++) {
+    const opts = Array.from({length: numPositions}, (_, k) => `<option value="${k+1}" ${k === plates[j].initPin ? 'selected' : ''}>${k+1}</option>`).join('');
+    html += `<td><select class="grid-select pin-grid-select" onchange="updatePin(${j}, this.value)">${opts}</select></td>`;
+  }
+  html += '</tr>';
+
+  // Effects rows
+  for (let i = 0; i < numPlates; i++) {
+    html += `<tr><th class="row-header">P${i+1} moves</th>`;
+    for (let j = 0; j < numPlates; j++) {
+      if (i === j) {
+        html += '<td class="diag" style="color:#333;font-size:10px;">self</td>';
+        continue;
+      }
+      const eff = plates[i].effects.find(e => e.target === j);
+      const val = eff ? (eff.dir === 1 ? 'same' : 'opposite') : 'none';
+      html += `<td><select class="grid-select" onchange="updateGridEffect(${i},${j},this.value)">
+        <option value="none" ${val==='none'?'selected':''}>&#8212;</option>
+        <option value="same" ${val==='same'?'selected':''}>&#8594; Same</option>
+        <option value="opposite" ${val==='opposite'?'selected':''}>&#8592; Opp</option>
+      </select></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  gridDiv.innerHTML = html;
+  container.appendChild(gridDiv);
+}
+
+function updateGridEffect(src, tgt, val) {
+  plates[src].effects = plates[src].effects.filter(e => e.target !== tgt);
+  if (val === 'same') plates[src].effects.push({target: tgt, dir: 1});
+  else if (val === 'opposite') plates[src].effects.push({target: tgt, dir: -1});
+  solution = null;
 }
 
 function updatePin(i, val) {
@@ -336,17 +353,6 @@ function updatePin(i, val) {
   renderVisual();
   solution = null;
   document.getElementById('solutionBox').style.display = 'none';
-}
-
-function updateEffect(plateIdx, effIdx, field, val) {
-  if (field === 'target') plates[plateIdx].effects[effIdx].target = parseInt(val);
-  else plates[plateIdx].effects[effIdx].dir = parseInt(val);
-  solution = null;
-}
-
-function removeEffect(plateIdx, effIdx) {
-  plates[plateIdx].effects.splice(effIdx, 1);
-  renderConfig();
 }
 
 function renderVisual() {

@@ -216,7 +216,8 @@ function renderConfig() {
     // Initial pin position
     const pinDiv = document.createElement('div');
     pinDiv.className = 'plate-pins-config';
-    pinDiv.innerHTML = `<span>Pin:</span><input type="number" class="pin-input" value="${plates[i].initPin + 1}" min="1" max="${numPositions}" onchange="updatePin(${i}, this.value)">`;
+    const opts = Array.from({length: numPositions}, (_, k) => `<option value="${k+1}" ${k === plates[i].initPin ? 'selected' : ''}>${k+1}</option>`).join('');
+    pinDiv.innerHTML = `<span>Pin:</span><select class="pin-input" onchange="updatePin(${i}, this.value)">${opts}</select>`;
     row.appendChild(pinDiv);
 
     // Effects
@@ -291,7 +292,12 @@ function renderVisual() {
       if (pos === center) slot.classList.add('center');
       if (currentPins[i] === pos) {
         slot.classList.add('has-pin');
-        slot.textContent = pos + 1; // 1-indexed display
+        slot.textContent = pos + 1;
+      } else {
+        slot.textContent = pos + 1;
+        slot.style.cursor = 'pointer';
+        slot.style.opacity = '0.4';
+        slot.onclick = () => setPin(i, pos);
       }
       vis.appendChild(slot);
     }
@@ -320,6 +326,16 @@ function renderVisual() {
 
     container.appendChild(row);
   }
+}
+
+function setPin(plateIdx, pos) {
+  plates[plateIdx].initPin = pos;
+  currentPins = plates.map(p => p.initPin);
+  renderConfig();
+  renderVisual();
+  solution = null;
+  solutionStates = [];
+  document.getElementById('solutionBox').style.display = 'none';
 }
 
 function manualMove(plateIdx, direction) {

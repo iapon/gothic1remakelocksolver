@@ -133,9 +133,10 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <label>Recipe:</label>
       <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
       <button class="btn btn-sm" onclick="saveRecipe()">Save</button>
+      <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; Share</button>
       <div class="search-wrap">
         <span class="search-icon">&#128269;</span>
-        <input type="text" class="search-input" id="recipeSearch" placeholder="Search recipes..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
+        <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
         <div class="search-dropdown" id="recipeDropdown"></div>
       </div>
       <button class="btn btn-sm" onclick="exportRecipe()">&#11015; Download</button>
@@ -143,6 +144,15 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <span style="color:#444;">|</span>
       <button class="btn btn-sm" onclick="exportAllRecipes()">&#11015; All</button>
       <label class="btn btn-sm" style="cursor:pointer;">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
+    </div>
+    <div class="recipe-box" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;">
+      <label style="color:#0f0;">&#127760; Community:</label>
+      <div class="search-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" class="search-input" id="communitySearch" placeholder="Search community..." oninput="filterCommunity()" onfocus="openCommunityDropdown()" onclick="event.stopPropagation()">
+        <div class="search-dropdown" id="communityDropdown"></div>
+      </div>
+      <button class="btn btn-sm" onclick="loadCommunity()">&#8635; Refresh</button>
     </div>
   </div>
 
@@ -177,7 +187,22 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
+  authDomain: "gothic-1-remake-lockpiker.firebaseapp.com",
+  projectId: "gothic-1-remake-lockpiker",
+  storageBucket: "gothic-1-remake-lockpiker.firebasestorage.app",
+  messagingSenderId: "970434471850",
+  appId: "1:970434471850:web:4457e60a28304337b5add3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let communityRecipes = [];
+
 let numPlates = 6;
 let numPositions = 7;
 let center = 3;
@@ -823,6 +848,107 @@ function resetAll() {
 // Init
 loadPreset();
 renderRecipeList();
-</script>
-</body>
-</html>
+loadCommunity();
+
+// ---- Community (Firebase) ----
+async function loadCommunity() {
+  try {
+    const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
+    communityRecipes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    filterCommunity();
+  } catch(e) {
+    console.error('Community load error', e);
+  }
+}
+
+async function submitToCommunity() {
+  const name = document.getElementById('recipeName').value.trim();
+  if (!name) { showToast('Enter a recipe name first'); return; }
+
+  const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
+  if (existing) { showToast(`"${name}" already exists in community`); return; }
+
+  const data = {
+    name,
+    numPlates, numPositions, center,
+    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection('recipes').add(data);
+    showToast(`Shared: ${name}`);
+    loadCommunity();
+  } catch(e) {
+    showToast('Error sharing recipe');
+    console.error(e);
+  }
+}
+
+function filterCommunity() {
+  const dropdown = document.getElementById('communityDropdown');
+  const query = document.getElementById('communitySearch').value.toLowerCase();
+  const filtered = communityRecipes.filter(r => r.name.toLowerCase().includes(query));
+
+  dropdown.innerHTML = '';
+  if (filtered.length === 0) {
+    dropdown.innerHTML = '<div class="search-empty">' + (communityRecipes.length === 0 ? 'No community recipes yet' : 'No matches') + '</div>';
+  } else {
+    for (const r of filtered) {
+      const item = document.createElement('div');
+      item.className = 'search-item';
+      const info = `${r.numPlates}P / ${r.numPositions}pos`;
+      const safe = (r.name || '').replace(/'/g, "\\'");
+      const rid = r.id;
+      item.innerHTML = `<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span><span class="si-del" onclick="event.stopPropagation();deleteCommunityRecipe('${rid}')" title="Report">&#9888;</span>`;
+      dropdown.appendChild(item);
+    }
+  }
+}
+
+function loadCommunityRecipe(id) {
+  const r = communityRecipes.find(x => x.id === id);
+  if (!r) return;
+  numPlates = r.numPlates;
+  numPositions = r.numPositions;
+  center = r.center;
+  document.getElementById('numPlates').value = numPlates;
+  plates = r.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}));
+  currentPins = plates.map(p => p.initPin);
+  renderConfig();
+  renderVisual();
+  solution = null;
+  solutionStates = [];
+  document.getElementById('solutionBox').style.display = 'none';
+  if (r.name) document.getElementById('recipeName').value = r.name;
+  closeCommunityDropdown();
+  setStatus('idle', `Loaded: ${r.name}`);
+}
+
+async function deleteCommunityRecipe(id) {
+  event.stopPropagation();
+  if (!confirm('Report this recipe?')) return;
+  try {
+    await db.collection('recipes').doc(id).delete();
+    showToast('Recipe removed');
+    loadCommunity();
+  } catch(e) {
+    showToast('Error removing');
+  }
+}
+
+function openCommunityDropdown() {
+  document.getElementById('communityDropdown').classList.add('open');
+}
+
+function closeCommunityDropdown() {
+  document.getElementById('communityDropdown').classList.remove('open');
+  document.getElementById('communitySearch').value = '';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    closeDropdown();
+    closeCommunityDropdown();
+  }
+});

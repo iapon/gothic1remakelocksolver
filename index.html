@@ -252,11 +252,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <button class="donate-btn" onclick="toggleDonate()" id="t_coffee">&#9749; Buy me a coffee</button>
   </div>
 
-  <div class="seo-text" id="seoText">
-    <h2>Gothic 1 Remake Chest Opener / Взлом замков Gothic 1 Remake</h2>
-    <p>A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.</p>
-    <p>Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции пинов и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех пинов по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.</p>
-  </div>
+  <div class="seo-text" id="seoText"></div>
 </div>
 <div class="donate-overlay" id="donateOverlay" onclick="toggleDonate()"></div>
 <div class="donate-popup" id="donatePopup">
@@ -360,6 +356,8 @@ const i18n = {
     cant_go: (n) => `Plate ${n} can't go further!`,
     would_go: (n) => `Plate ${n} would go out of bounds!`,
     address_copied: 'Address copied!',
+    seo_title: 'Gothic 1 Remake Chest Opener',
+    seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.',
   },
   ru: {
     title: '\u{1F512} Вскрытие Замков',
@@ -373,8 +371,8 @@ const i18n = {
     search_local: 'Поиск локальных...',
     download: '\u2B07 Скачать',
     upload: '\u2B06 Загрузить',
-    download_all: '\u2B07 Все',
-    upload_all: '\u2B06 Все',
+    download_all: '\u2B07 Скачать все',
+    upload_all: '\u2B06 Загрузить все',
     community: 'Сообщество',
     search_community: 'Поиск в сообществе...',
     refresh: '\u21BB Обновить',
@@ -385,8 +383,8 @@ const i18n = {
     autoplay: 'Автоплей',
     speed: 'Скорость:',
     coffee: '\u2615 Угостить кофе',
-    pin: 'Пин',
-    moves: 'ходит',
+    pin: 'Штырь',
+    moves: 'двигает',
     self: '—',
     same: '\u2192 Туда же',
     opposite: '\u2190 Обратно',
@@ -421,6 +419,8 @@ const i18n = {
     cant_go: (n) => `Пластина ${n} дальше не идёт!`,
     would_go: (n) => `Пластина ${n} выйдет за границы!`,
     address_copied: 'Адрес скопирован!',
+    seo_title: 'Взлом замков Gothic 1 Remake',
+    seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.',
   }
 };
 
@@ -435,6 +435,8 @@ function applyLang() {
   document.getElementById('recipeSearch').placeholder = t('search_local');
   document.getElementById('communitySearch').placeholder = t('search_community');
   if (plates.length) { renderConfig(); renderRecipeList(); filterCommunity(); }
+  const seo = document.getElementById('seoText');
+  if (seo) seo.innerHTML = `<h2>${t('seo_title')}</h2><p>${t('seo_text')}</p>`;
 }
 
 function toggleLang() {

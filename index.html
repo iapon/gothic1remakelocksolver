@@ -119,9 +119,9 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <label>Plates:</label>
       <input type="number" id="numPlates" value="4" min="2" max="12">
       <label>Positions:</label>
-      <input type="number" id="numPositions" value="3" min="3" max="15">
+      <input type="number" id="numPositions" value="7" min="3" max="15">
       <label>Center:</label>
-      <input type="number" id="centerPos" value="2" min="1" max="15">
+      <input type="number" id="centerPos" value="4" min="1" max="15">
       <button class="btn btn-sm" onclick="rebuildConfig()">Apply</button>
     </div>
     <div class="recipe-box">
@@ -572,11 +572,11 @@ function showToast(msg) {
 
 function loadPreset() {
   numPlates = 4;
-  numPositions = 3;
-  center = 1; // 0-indexed, position 2 displayed
+  numPositions = 7;
+  center = 3; // 0-indexed, position 4 displayed
   document.getElementById('numPlates').value = 4;
-  document.getElementById('numPositions').value = 3;
-  document.getElementById('centerPos').value = 2;
+  document.getElementById('numPositions').value = 7;
+  document.getElementById('centerPos').value = 4;
 
   plates = [
     {initPin: 0, effects: []},

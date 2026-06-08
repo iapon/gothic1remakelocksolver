@@ -123,6 +123,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <label>Center:</label>
       <input type="number" id="centerPos" value="4" min="1" max="15">
       <button class="btn btn-sm" onclick="rebuildConfig()">Apply</button>
+      <button class="btn btn-sm btn-danger" onclick="resetAll()">Reset All</button>
     </div>
     <div class="recipe-box">
       <label>Recipe:</label>
@@ -135,6 +136,9 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       </div>
       <button class="btn btn-sm" onclick="exportRecipe()">&#11015; Download</button>
       <label class="btn btn-sm" style="cursor:pointer;">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
+      <span style="color:#444;">|</span>
+      <button class="btn btn-sm" onclick="exportAllRecipes()">&#11015; All</button>
+      <label class="btn btn-sm" style="cursor:pointer;">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
     </div>
   </div>
 
@@ -729,6 +733,50 @@ function importRecipe(ev) {
   };
   reader.readAsText(file);
   ev.target.value = '';
+}
+
+function exportAllRecipes() {
+  const recipes = getRecipes();
+  const names = Object.keys(recipes);
+  if (names.length === 0) { showToast('No recipes to export'); return; }
+  const blob = new Blob([JSON.stringify(recipes, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'all_recipes.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importAllRecipes(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const recipes = getRecipes();
+      let count = 0;
+      for (const [name, recipe] of Object.entries(data)) {
+        if (recipe.numPlates && recipe.plates) {
+          recipes[name] = recipe;
+          count++;
+        }
+      }
+      saveRecipes(recipes);
+      renderRecipeList();
+      showToast(`Imported ${count} recipes`);
+    } catch(err) {
+      showToast('Invalid file');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+function resetAll() {
+  if (!confirm('Reset all settings to defaults?')) return;
+  loadPreset();
+  renderRecipeList();
 }
 
 // Init

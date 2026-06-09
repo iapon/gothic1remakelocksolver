@@ -1242,7 +1242,7 @@ function renderGuide() {
   const c = document.getElementById('guideContent');
   if (lang === 'ru') {
     c.innerHTML = `<h3>Как заполнять таблицу эффектов</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это диск в замке со штырём.</div></div>
+<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это подвижный элемент замка, который можно сдвигать влево или вправо.</div></div>
 <div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1–7). Цель — сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div>
 <div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов показывает, <strong>как сдвиг одной пластины влияет на другие</strong>. Строка = пластина, которую вы сдвигаете. Столбец = пластина, которая сдвигается вместе с ней.</div></div>
 <div class="step"><div class="step-num">4</div><div class="step-text">Для каждой пары пластин выберите:<ul>
@@ -1256,7 +1256,7 @@ function renderGuide() {
 <p style="color:#8ecae6;margin-top:12px;">Подсказка: загрузите рецепт из сообщества или из JSON-файла, чтобы не заполнять вручную!</p>`;
   } else {
     c.innerHTML = `<h3>How to fill the effects matrix</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a disc in the lock with a pin on it.</div></div>
+<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a movable element in the lock that can be shifted left or right.</div></div>
 <div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin's <strong>starting position</strong> (1–7). The goal is to shift all pins to the <strong>center</strong> (position 4).</div></div>
 <div class="step"><div class="step-num">3</div><div class="step-text">The effects table shows <strong>how shifting one plate affects others</strong>. Row = the plate you shift. Column = the plate that shifts along with it.</div></div>
 <div class="step"><div class="step-num">4</div><div class="step-text">For each plate pair, choose:<ul>

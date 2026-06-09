@@ -261,7 +261,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <div class="config-row">
       <label id="t_target_window">Target Window:</label>
       <select id="bridgeWindow" style="min-width:300px;max-width:500px;" onchange="bridgeSetTarget(this.value)"></select>
-      <button class="btn btn-sm" onclick="bridgeRefreshWindows()">&#8635; Refresh</button>
+      <button class="btn btn-sm" onclick="bridgeRefreshWindows()">&#8635; <span id="t_refresh2">Refresh</span></button>
     </div>
     <div class="config-row">
       <label id="t_delay">Delay:</label>
@@ -269,11 +269,11 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <span id="bridgeDelayVal" style="color:#ffd700;font-size:13px;">300ms</span>
     </div>
     <div class="config-row">
-      <label>Keys:</label>
-      <span style="color:#8ecae6;font-size:12px;">Next: <strong id="keyNextLabel">W</strong></span>
-      <span style="color:#8ecae6;font-size:12px;">Prev: <strong id="keyPrevLabel">S</strong></span>
-      <span style="color:#8ecae6;font-size:12px;">Left: <strong id="keyDir1Label">A</strong></span>
-      <span style="color:#8ecae6;font-size:12px;">Right: <strong id="keyDir2Label">D</strong></span>
+      <label id="t_keys">Keys:</label>
+      <span style="color:#8ecae6;font-size:12px;"><span id="t_key_next">Next</span>: <strong id="keyNextLabel">W</strong></span>
+      <span style="color:#8ecae6;font-size:12px;"><span id="t_key_prev">Prev</span>: <strong id="keyPrevLabel">S</strong></span>
+      <span style="color:#8ecae6;font-size:12px;"><span id="t_key_left">Left</span>: <strong id="keyDir1Label">A</strong></span>
+      <span style="color:#8ecae6;font-size:12px;"><span id="t_key_right">Right</span>: <strong id="keyDir2Label">D</strong></span>
       <button class="btn btn-sm" onclick="openKeyConfig()" id="t_change_keys">Change</button>
     </div>
     <div class="controls">
@@ -408,6 +408,7 @@ const i18n = {
     bridge_title: 'Bridge — Execute in Game',
     target_window: 'Target Window:',
     delay: 'Delay:',
+    refresh2: 'Refresh',
     execute_game: 'Execute in Game',
     stop: 'Stop',
     executing_steps: 'Executing...',
@@ -415,6 +416,15 @@ const i18n = {
     stopped: 'Stopped',
     how_to: 'How to fill',
     guide_close: 'Close',
+    keys: 'Keys:',
+    key_next: 'Next',
+    key_prev: 'Prev',
+    key_left: 'Left',
+    key_right: 'Right',
+    change_keys: 'Change',
+    key_bindings: 'Key Bindings',
+    press_key: 'Press a key...',
+    assigned: 'assigned',
     seo_title: 'Gothic 1 Remake Chest Opener',
     seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.',
   },
@@ -488,6 +498,7 @@ const i18n = {
     bridge_title: 'Bridge — Выполнить в игре',
     target_window: 'Окно:',
     delay: 'Задержка:',
+    refresh2: 'Обновить',
     execute_game: 'Выполнить в игре',
     stop: 'Стоп',
     executing_steps: 'Выполнение...',
@@ -495,6 +506,15 @@ const i18n = {
     stopped: 'Остановлено',
     how_to: 'Как заполнить',
     guide_close: 'Закрыть',
+    keys: 'Клавиши:',
+    key_next: 'След.',
+    key_prev: 'Пред.',
+    key_left: 'Влево',
+    key_right: 'Вправо',
+    change_keys: 'Изменить',
+    key_bindings: 'Назначение клавиш',
+    press_key: 'Нажмите клавишу...',
+    assigned: 'назначена',
     seo_title: 'Взлом замков Gothic 1 Remake',
     seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.',
   }
@@ -505,7 +525,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','execute_game','stop','how_to','guide_close'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','how_to','guide_close','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -1442,7 +1462,7 @@ function startCapture(which) {
   });
   const btnId = 'keyCfg' + which.charAt(0).toUpperCase() + which.slice(1);
   document.getElementById(btnId).style.borderColor = '#ffd700';
-  document.getElementById('keyConfigStatus').textContent = 'Press a key...';
+  document.getElementById('keyConfigStatus').textContent = t('press_key');
 }
 
 document.addEventListener('keydown', function(e) {
@@ -1455,7 +1475,7 @@ document.addEventListener('keydown', function(e) {
   label.textContent = vkToChar(vk);
   label.style.borderColor = '#0f0';
   bridgeConfig[map[capturingKey]] = vk;
-  document.getElementById('keyConfigStatus').textContent = vkToChar(vk) + ' assigned';
+  document.getElementById('keyConfigStatus').textContent = vkToChar(vk) + ' ' + t('assigned');
   capturingKey = null;
   if (window.setConfig) window.setConfig(bridgeConfig);
   updateKeyLabels();
@@ -1507,11 +1527,11 @@ window.updateExecStatus = function(running, msg, step, total) {
 </script>
 <div class="kc-overlay" id="keyConfigOverlay" onclick="closeKeyConfig()"></div>
 <div class="kc-modal" id="keyConfigModal">
-  <h3>Key Bindings</h3>
-  <div class="kc-row"><label>Next plate:</label><div class="kc-btn" id="keyCfgNext" onclick="startCapture('next')">W</div></div>
-  <div class="kc-row"><label>Prev plate:</label><div class="kc-btn" id="keyCfgPrev" onclick="startCapture('prev')">S</div></div>
-  <div class="kc-row"><label>Move left:</label><div class="kc-btn" id="keyCfgDir1" onclick="startCapture('dir1')">A</div></div>
-  <div class="kc-row"><label>Move right:</label><div class="kc-btn" id="keyCfgDir2" onclick="startCapture('dir2')">D</div></div>
+  <h3 id="t_key_bindings">Key Bindings</h3>
+  <div class="kc-row"><label id="t_key_next2">Next plate:</label><div class="kc-btn" id="keyCfgNext" onclick="startCapture('next')">W</div></div>
+  <div class="kc-row"><label id="t_key_prev2">Prev plate:</label><div class="kc-btn" id="keyCfgPrev" onclick="startCapture('prev')">S</div></div>
+  <div class="kc-row"><label id="t_key_left2">Move left:</label><div class="kc-btn" id="keyCfgDir1" onclick="startCapture('dir1')">A</div></div>
+  <div class="kc-row"><label id="t_key_right2">Move right:</label><div class="kc-btn" id="keyCfgDir2" onclick="startCapture('dir2')">D</div></div>
   <div class="kc-status" id="keyConfigStatus"></div>
   <div style="text-align:center;margin-top:10px;"><button class="btn btn-sm" onclick="closeKeyConfig()">OK</button></div>
 </div>

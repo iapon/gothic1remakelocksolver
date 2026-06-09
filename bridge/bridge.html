@@ -1242,31 +1242,31 @@ function renderGuide() {
   const c = document.getElementById('guideContent');
   if (lang === 'ru') {
     c.innerHTML = `<h3>Как заполнять таблицу эффектов</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это вращающийся диск в замке.</div></div>
-<div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1–7). Штырь — это фиксатор на пластине. Цель — сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div>
-<div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов ниже показывает, <strong>как одна пластина влияет на другую</strong> при повороте. Строка = пластина, которую вы поворачиваете. Столбец = пластина, которая сдвигается.</div></div>
+<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это диск в замке со штырём.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1–7). Цель — сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов показывает, <strong>как сдвиг одной пластины влияет на другие</strong>. Строка = пластина, которую вы сдвигаете. Столбец = пластина, которая сдвигается вместе с ней.</div></div>
 <div class="step"><div class="step-num">4</div><div class="step-text">Для каждой пары пластин выберите:<ul>
 <li><strong>—</strong> (пусто) — пластины не связаны</li>
-<li><strong>→ Same</strong> — при повороте пластины-строки, пластина-столбец сдвигается в <em>том же направлении</em></li>
-<li><strong>← Opp</strong> — при повороте пластины-строки, пластина-столбец сдвигается в <em>противоположном направлении</em></li>
+<li><strong>→ Same</strong> — при сдвиге пластины-строки влево, пластина-столбец тоже сдвигается <em>влево</em> (и наоборот — вправо → вправо)</li>
+<li><strong>← Opp</strong> — при сдвиге пластины-строки влево, пластина-столбец сдвигается <em>вправо</em> (и наоборот)</li>
 </ul></div></div>
-<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Пример:</strong> Если P1 → Same стоит на пересечении строки P1 и столбца P3, значит: при повороте P1 влево, P3 тоже сдвинется влево. При повороте P1 вправо — P3 тоже вправо.</div></div>
-<div class="step"><div class="step-num">6</div><div class="step-text">Диагональные ячейки (где строка = столбец) всегда пустые — пластина не влияет сама на себя.</div></div>
-<div class="step"><div class="step-num">7</div><div class="step-text">Решение считается <strong>автоматически</strong> при любом изменении. Алгоритм BFS найдёт кратчайшую последовательность ходов.</div></div>
+<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Пример:</strong> Если P1 → Same стоит на пересечении строки P1 и столбца P3, значит: при сдвиге P1 влево, P3 тоже сдвигается влево. При сдвиге P1 вправо — P3 тоже вправо.</div></div>
+<div class="step"><div class="step-num">6</div><div class="step-text">Диагональные ячейки (строка = столбец) всегда пустые — пластина не влияет сама на себя.</div></div>
+<div class="step"><div class="step-num">7</div><div class="step-text">Решение считается <strong>автоматически</strong> при любом изменении. Алгоритм BFS найдёт кратчайшую последовательность сдвигов.</div></div>
 <p style="color:#8ecae6;margin-top:12px;">Подсказка: загрузите рецепт из сообщества или из JSON-файла, чтобы не заполнять вручную!</p>`;
   } else {
     c.innerHTML = `<h3>How to fill the effects matrix</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a rotating disc in the lock.</div></div>
-<div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin's <strong>starting position</strong> (1–7). A pin is a latch on a plate. The goal is to move all pins to the <strong>center</strong> (position 4).</div></div>
-<div class="step"><div class="step-num">3</div><div class="step-text">The effects table below shows <strong>how one plate affects another</strong> when rotated. Row = the plate you rotate. Column = the plate that shifts.</div></div>
+<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a disc in the lock with a pin on it.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin's <strong>starting position</strong> (1–7). The goal is to shift all pins to the <strong>center</strong> (position 4).</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-text">The effects table shows <strong>how shifting one plate affects others</strong>. Row = the plate you shift. Column = the plate that shifts along with it.</div></div>
 <div class="step"><div class="step-num">4</div><div class="step-text">For each plate pair, choose:<ul>
 <li><strong>—</strong> (none) — plates are not linked</li>
-<li><strong>→ Same</strong> — when the row plate moves, the column plate moves in the <em>same direction</em></li>
-<li><strong>← Opp</strong> — when the row plate moves, the column plate moves in the <em>opposite direction</em></li>
+<li><strong>→ Same</strong> — when you shift the row plate left, the column plate also shifts <em>left</em> (and right → right)</li>
+<li><strong>← Opp</strong> — when you shift the row plate left, the column plate shifts <em>right</em> (and vice versa)</li>
 </ul></div></div>
-<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Example:</strong> If P1 → Same is set at row P1, column P3, it means: when you rotate P1 left, P3 also moves left. When you rotate P1 right, P3 also moves right.</div></div>
+<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Example:</strong> If P1 → Same is set at row P1, column P3, it means: when you shift P1 left, P3 also shifts left. When you shift P1 right, P3 also shifts right.</div></div>
 <div class="step"><div class="step-num">6</div><div class="step-text">Diagonal cells (where row = column) are always empty — a plate cannot affect itself.</div></div>
-<div class="step"><div class="step-num">7</div><div class="step-text">The solution is computed <strong>automatically</strong> on every change. The BFS algorithm finds the shortest sequence of moves.</div></div>
+<div class="step"><div class="step-num">7</div><div class="step-text">The solution is computed <strong>automatically</strong> on every change. The BFS algorithm finds the shortest sequence of shifts.</div></div>
 <p style="color:#8ecae6;margin-top:12px;">Tip: load a recipe from the community or a JSON file to avoid filling manually!</p>`;
   }
 }

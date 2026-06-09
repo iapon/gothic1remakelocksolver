@@ -1220,6 +1220,7 @@ loadCommunity();
 
 // ---- Community (Firebase) ----
 async function loadCommunity() {
+  if (!db) return;
   try {
     const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
     communityRecipes = snap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -1242,7 +1243,17 @@ async function submitToCommunity() {
     plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
     steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-};
+  };
+
+  try {
+    await db.collection('recipes').add(data);
+    showToast(t('shared')(name));
+    loadCommunity();
+  } catch(e) {
+    showToast(t('share_err'));
+    console.error(e);
+  }
+}
 
 function toggleGuide() {
   const popup = document.getElementById('guidePopup');
@@ -1291,16 +1302,6 @@ function renderGuide() {
   }
 }
 
-
-  try {
-    await db.collection('recipes').add(data);
-    showToast(t('shared')(name));
-    loadCommunity();
-  } catch(e) {
-    showToast(t('share_err'));
-    console.error(e);
-  }
-}
 
 function filterCommunity() {
   const dropdown = document.getElementById('communityDropdown');

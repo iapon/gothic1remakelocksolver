@@ -178,8 +178,6 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
 .lang-btn { position: absolute; top: 20px; right: 20px; background: #0f3460; border: 1px solid #1a4a7a; color: #8ecae6; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
 .lang-btn:hover { border-color: #00d4ff; color: #00d4ff; }
-.bridge-dl-btn { position: absolute; top: 20px; right: 80px; background: linear-gradient(135deg, #2a1020, #3a1530); border: 1px solid #e94560; color: #e94560; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s; text-decoration: none; }
-.bridge-dl-btn:hover { box-shadow: 0 0 15px rgba(233,69,96,0.4); color: #ff6b8a; }
 .seo-text { margin-top: 25px; padding: 20px; background: #0f1a2e; border-radius: 10px; font-size: 13px; color: #8ecae6; line-height: 1.7; }
 .seo-text h2 { color: #00d4ff; font-size: 15px; margin-bottom: 10px; }
 .seo-text p { margin-bottom: 0; }
@@ -188,7 +186,6 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 </head>
 <body>
 <button class="lang-btn" id="langBtn" onclick="toggleLang()">RU</button>
-<a href="https://github.com/iapon/gothic1remakelocksolver/releases/latest" target="_blank" class="bridge-dl-btn" id="bridgeDlBtn">&#11015; Windows App</a>
 <div class="container">
   <h1 id="t_title">&#128274; Lock Pick Solver</h1>
 
@@ -236,23 +233,27 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <div id="plateConfig" class="plate-list"></div>
   </div>
 
-  <div class="panel">
-    <h2 id="t_solve">&#128269; Solve</h2>
-    <div class="controls">
-      <button class="btn" onclick="solve()" id="t_find">&#9654; Find Solution</button>
-      <button class="btn" onclick="resetToInitial()" id="t_reset">&#8634; Reset to Initial</button>
-      <button class="btn" id="autoPlayBtn" onclick="toggleAutoPlay()">&#9658; <span id="t_autoplay">Auto Play</span></button>
-      <label style="color:#8ecae6;font-size:12px;" id="t_speed">Speed:</label>
-      <select id="autoSpeed" class="speed-select" onchange="updateSpeed()">
-        <option value="3000">0.25x</option><option value="2000">0.5x</option><option value="1200" selected>1x</option><option value="600">2x</option><option value="300">4x</option>
-      </select>
-      <button class="btn" onclick="stepBack()">&#9664;</button>
-      <span id="stepCounter" class="step-counter">— / —</span>
-      <span id="stepMove" class="step-move"></span>
-      <button class="btn" onclick="stepForward()">&#9654;</button>
-      <button class="btn btn-game" onclick="copySteps()" id="t_copy_steps">&#128203; Copy Steps</button>
-      <button class="btn btn-game" onclick="playInGame()" id="t_play_game">&#127918; Execute in Game</button>
+  <div class="panel" id="bridgePanel" style="border: 1px solid #e94560;">
+    <h2 style="color: #e94560;">&#127918; Bridge — Execute in Game</h2>
+    <div class="config-row">
+      <label>Target Window:</label>
+      <select id="bridgeWindow" style="min-width:300px;max-width:500px;" onchange="bridgeSetTarget(this.value)"></select>
+      <button class="btn btn-sm" onclick="bridgeRefreshWindows()">&#8635; Refresh</button>
     </div>
+    <div class="config-row">
+      <label>Delay:</label>
+      <input type="range" id="bridgeDelay" min="50" max="1500" value="300" style="width:160px;" oninput="bridgeSetDelay(this.value)">
+      <span id="bridgeDelayVal" style="color:#ffd700;font-size:13px;">300ms</span>
+    </div>
+    <div class="controls">
+      <button class="btn btn-game" onclick="bridgeExecute()" style="font-size:16px;padding:10px 30px;">&#9654; Execute in Game</button>
+      <button class="btn btn-danger" id="bridgeStopBtn" onclick="bridgeStop()" style="display:none;font-size:16px;padding:10px 24px;">&#9632; Stop</button>
+      <span id="bridgeExecStatus" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 id="t_solve">&#128269; Solution</h2>
     <div id="status" class="status idle">Ready</div>
     <div id="plateVisual"></div>
     <div id="solutionBox" class="solution-box" style="display:none"></div>
@@ -374,7 +375,7 @@ const i18n = {
     copy_steps: 'Copy Steps',
     steps_copied: 'Steps copied to clipboard!',
     seo_title: 'Gothic 1 Remake Chest Opener',
-    seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.<br><br><strong>&#127918; Windows Bridge App</strong> — Download the native Windows application to execute solved steps directly in the game via keyboard input. Select the game window, set the delay, and press Execute — the bridge sends key presses (W/S to navigate plates, A/D to move pins) automatically.',
+    seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.',
   },
   ru: {
     title: '\u{1F512} Вскрытие Замков',
@@ -444,7 +445,7 @@ const i18n = {
     copy_steps: 'Копировать шаги',
     steps_copied: 'Шаги скопированы!',
     seo_title: 'Взлом замков Gothic 1 Remake',
-    seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.<br><br><strong>&#127918; Windows Bridge</strong> — Скачайте нативное Windows-приложение для автоматического выполнения шагов прямо в игре. Выберите окно игры, установите задержку и нажмите Execute — bridge автоматически отправляет нажатия клавиш (W/S для навигации по пластинам, A/D для перемещения штырей).',
+    seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.',
   }
 };
 
@@ -478,6 +479,8 @@ let solution = null;
 let stepIndex = 0;
 let autoPlayId = null;
 
+function autoSolve() { solve(); }
+
 function rebuildConfig() {
   numPlates = parseInt(document.getElementById('numPlates').value);
   numPositions = 7;
@@ -496,7 +499,7 @@ function rebuildConfig() {
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
-  solution = null;
+  autoSolve();
   document.getElementById('solutionBox').style.display = 'none';
   setStatus('idle', t('ready'));
 }
@@ -548,14 +551,14 @@ function updateGridEffect(src, tgt, val) {
   plates[src].effects = plates[src].effects.filter(e => e.target !== tgt);
   if (val === 'same') plates[src].effects.push({target: tgt, dir: 1});
   else if (val === 'opposite') plates[src].effects.push({target: tgt, dir: -1});
-  solution = null;
+  autoSolve();
 }
 
 function updatePin(i, val) {
   plates[i].initPin = Math.max(0, Math.min(numPositions-1, (parseInt(val)||1) - 1)); // 1-indexed -> 0-indexed
   currentPins = plates.map(p => p.initPin);
   renderVisual();
-  solution = null;
+  autoSolve();
   document.getElementById('solutionBox').style.display = 'none';
 }
 
@@ -621,7 +624,7 @@ function setPin(plateIdx, pos) {
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
-  solution = null;
+  autoSolve();
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
 }
@@ -927,6 +930,10 @@ async function playInGame() {
     showToast(t('solve_first'));
     return;
   }
+  if (window.execute) {
+    bridgeExecute();
+    return;
+  }
   const steps = solution.map(s => ({plate: s.plate, dir: s.dir}));
   try {
     const r = await fetch('http://localhost:8765/api/execute', {
@@ -964,7 +971,7 @@ function loadPreset() {
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
-  solution = null;
+  autoSolve();
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
   setStatus('idle', t('ready'));
@@ -1006,7 +1013,7 @@ function loadRecipe(name) {
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
-  solution = null;
+  autoSolve();
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
   showRecipeName(name);
@@ -1092,7 +1099,7 @@ function importRecipe(ev) {
       currentPins = plates.map(p => p.initPin);
       renderConfig();
       renderVisual();
-      solution = null;
+      autoSolve();
       solutionStates = [];
       document.getElementById('solutionBox').style.display = 'none';
       if (data.name) document.getElementById('recipeName').value = data.name;
@@ -1225,7 +1232,7 @@ function loadCommunityRecipe(id) {
   currentPins = plates.map(p => p.initPin);
   renderConfig();
   renderVisual();
-  solution = null;
+  autoSolve();
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
@@ -1241,6 +1248,81 @@ function closeCommunityDropdown() {
   document.getElementById('communityDropdown').classList.remove('open');
   document.getElementById('communitySearch').value = '';
 }
+
+// === Bridge-specific (native Go bindings) ===
+const isBridge = typeof window.execute === 'function';
+
+if (isBridge) {
+  document.getElementById('bridgePanel').style.display = '';
+  bridgeRefreshWindows();
+} else {
+  const bp = document.getElementById('bridgePanel');
+  if (bp) bp.style.display = 'none';
+}
+
+async function bridgeRefreshWindows() {
+  if (!window.getWindows) return;
+  const wins = await window.getWindows();
+  const sel = document.getElementById('bridgeWindow');
+  if (!sel) return;
+  sel.innerHTML = '';
+  for (let i = 0; i < wins.length; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = wins[i].title;
+    sel.appendChild(opt);
+  }
+}
+
+function bridgeSetTarget(val) {
+  if (window.setTargetWindow) window.setTargetWindow(parseInt(val));
+}
+
+function bridgeSetDelay(val) {
+  document.getElementById('bridgeDelayVal').textContent = val + 'ms';
+  if (window.setConfig) window.setConfig({keyPrev: 0x53, keyNext: 0x57, keyDir1: 0x41, keyDir2: 0x44, delay: parseInt(val)});
+}
+
+async function bridgeExecute() {
+  if (!solution || solution.length === 0) {
+    showToast(t('solve_first'));
+    return;
+  }
+  if (!window.execute) {
+    showToast(t('bridge_error'));
+    return;
+  }
+  const steps = solution.map(s => ({plate: s.plate, dir: s.dir}));
+  const result = await window.execute(steps, numPlates);
+  if (result.ok) {
+    document.getElementById('bridgeStopBtn').style.display = 'inline-block';
+    document.getElementById('bridgeExecStatus').textContent = 'Executing...';
+    showToast(t('executing'));
+  } else {
+    showToast(result.error || 'Execute failed');
+  }
+}
+
+function bridgeStop() {
+  if (window.stop) window.stop();
+  document.getElementById('bridgeStopBtn').style.display = 'none';
+  document.getElementById('bridgeExecStatus').textContent = '';
+  setStatus('idle', t('ready'));
+}
+
+window.updateExecStatus = function(running, msg, step, total) {
+  const btn = document.getElementById('bridgeStopBtn');
+  const st = document.getElementById('bridgeExecStatus');
+  if (running) {
+    if (btn) btn.style.display = 'inline-block';
+    if (st) st.textContent = msg;
+  } else {
+    if (btn) btn.style.display = 'none';
+    if (st) st.textContent = '';
+    if (msg) setStatus('found', msg);
+    else setStatus('found', t('done'));
+  }
+};
 
 </script>
 </body>

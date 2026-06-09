@@ -194,6 +194,15 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .guide-popup .step-text em { color:#ffd700; font-style:normal; }
 .guide-popup .close-guide { text-align:center; margin-top:16px; }
 .guide-popup ul { color:#e0e0e0; font-size:13px; line-height:1.8; padding-left:20px; margin-bottom:10px; }
+.kc-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:400; }
+.kc-overlay.open { display:block; }
+.kc-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#16213e; border:1px solid #00d4ff; border-radius:10px; padding:20px; z-index:401; min-width:300px; }
+.kc-modal.open { display:block; }
+.kc-modal h3 { color:#00d4ff; margin-bottom:14px; }
+.kc-row { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+.kc-row label { color:#8ecae6; min-width:80px; font-size:13px; }
+.kc-row .kc-btn { background:#0f3460; border:2px solid #1a4a7a; color:#ffd700; padding:4px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; min-width:60px; text-align:center; }
+.kc-status { color:#ffd700; font-size:12px; margin:8px 0; text-align:center; }
 </style>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
@@ -259,6 +268,14 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <input type="range" id="bridgeDelay" min="50" max="1500" value="300" style="width:160px;" oninput="bridgeSetDelay(this.value)">
       <span id="bridgeDelayVal" style="color:#ffd700;font-size:13px;">300ms</span>
     </div>
+    <div class="config-row">
+      <label>Keys:</label>
+      <span style="color:#8ecae6;font-size:12px;">Next: <strong id="keyNextLabel">W</strong></span>
+      <span style="color:#8ecae6;font-size:12px;">Prev: <strong id="keyPrevLabel">S</strong></span>
+      <span style="color:#8ecae6;font-size:12px;">Left: <strong id="keyDir1Label">A</strong></span>
+      <span style="color:#8ecae6;font-size:12px;">Right: <strong id="keyDir2Label">D</strong></span>
+      <button class="btn btn-sm" onclick="openKeyConfig()" id="t_change_keys">Change</button>
+    </div>
     <div class="controls">
       <button class="btn btn-game" onclick="bridgeExecute()" style="font-size:16px;padding:10px 30px;">&#9654; <span id="t_execute_game">Execute in Game</span></button>
       <button class="btn btn-danger" id="bridgeStopBtn" onclick="bridgeStop()" style="display:none;font-size:16px;padding:10px 24px;">&#9632; <span id="t_stop">Stop</span></button>
@@ -313,8 +330,8 @@ const firebaseConfig = {
   messagingSenderId: "970434471850",
   appId: "1:970434471850:web:4457e60a28304337b5add3"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null;
+try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.warn('Firebase not available', e); }
 
 let communityRecipes = [];
 
@@ -1365,8 +1382,85 @@ function bridgeSetTarget(val) {
 
 function bridgeSetDelay(val) {
   document.getElementById('bridgeDelayVal').textContent = val + 'ms';
-  if (window.setConfig) window.setConfig({keyPrev: 0x53, keyNext: 0x57, keyDir1: 0x41, keyDir2: 0x44, delay: parseInt(val)});
+  if (window.setConfig) window.setConfig({keyPrev: bridgeConfig.keyPrev, keyNext: bridgeConfig.keyNext, keyDir1: bridgeConfig.keyDir1, keyDir2: bridgeConfig.keyDir2, delay: parseInt(val)});
 }
+
+let bridgeConfig = {keyPrev: 0x53, keyNext: 0x57, keyDir1: 0x41, keyDir2: 0x44, delay: 300};
+let capturingKey = null;
+
+async function loadBridgeConfig() {
+  if (!window.getConfig) return;
+  bridgeConfig = await window.getConfig();
+  updateKeyLabels();
+  document.getElementById('bridgeDelay').value = bridgeConfig.delay;
+  document.getElementById('bridgeDelayVal').textContent = bridgeConfig.delay + 'ms';
+}
+
+function updateKeyLabels() {
+  document.getElementById('keyNextLabel').textContent = vkToChar(bridgeConfig.keyNext);
+  document.getElementById('keyPrevLabel').textContent = vkToChar(bridgeConfig.keyPrev);
+  document.getElementById('keyDir1Label').textContent = vkToChar(bridgeConfig.keyDir1);
+  document.getElementById('keyDir2Label').textContent = vkToChar(bridgeConfig.keyDir2);
+}
+
+function vkToChar(vk) {
+  if (vk >= 0x41 && vk <= 0x5A) return String.fromCharCode(vk);
+  if (vk >= 0x30 && vk <= 0x39) return String.fromCharCode(vk);
+  if (vk >= 0x70 && vk <= 0x87) return 'F' + (vk - 0x70 + 1);
+  if (vk === 0x08) return 'BS';
+  if (vk === 0x0D) return 'Enter';
+  if (vk === 0x20) return 'Space';
+  if (vk === 0x25) return 'Left';
+  if (vk === 0x26) return 'Up';
+  if (vk === 0x27) return 'Right';
+  if (vk === 0x28) return 'Down';
+  return '0x' + vk.toString(16).toUpperCase();
+}
+
+function openKeyConfig() {
+  const modal = document.getElementById('keyConfigModal');
+  modal.classList.add('open');
+  document.getElementById('keyConfigOverlay').classList.add('open');
+  capturingKey = null;
+  document.getElementById('keyConfigStatus').textContent = '';
+  ['keyCfgNext','keyCfgPrev','keyCfgDir1','keyCfgDir2'].forEach(id => {
+    document.getElementById(id).style.borderColor = '#1a4a7a';
+  });
+}
+
+function closeKeyConfig() {
+  document.getElementById('keyConfigModal').classList.remove('open');
+  document.getElementById('keyConfigOverlay').classList.remove('open');
+  capturingKey = null;
+}
+
+function startCapture(which) {
+  capturingKey = which;
+  ['keyCfgNext','keyCfgPrev','keyCfgDir1','keyCfgDir2'].forEach(id => {
+    document.getElementById(id).style.borderColor = '#1a4a7a';
+  });
+  const btnId = 'keyCfg' + which.charAt(0).toUpperCase() + which.slice(1);
+  document.getElementById(btnId).style.borderColor = '#ffd700';
+  document.getElementById('keyConfigStatus').textContent = 'Press a key...';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!capturingKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const vk = e.keyCode || e.which;
+  const map = {next: 'keyNext', prev: 'keyPrev', dir1: 'keyDir1', dir2: 'keyDir2'};
+  const label = document.getElementById('keyCfg' + capturingKey.charAt(0).toUpperCase() + capturingKey.slice(1));
+  label.textContent = vkToChar(vk);
+  label.style.borderColor = '#0f0';
+  bridgeConfig[map[capturingKey]] = vk;
+  document.getElementById('keyConfigStatus').textContent = vkToChar(vk) + ' assigned';
+  capturingKey = null;
+  if (window.setConfig) window.setConfig(bridgeConfig);
+  updateKeyLabels();
+});
+
+if (isBridge) { loadBridgeConfig(); }
 
 async function bridgeExecute() {
   if (!solution || solution.length === 0) {
@@ -1410,6 +1504,16 @@ window.updateExecStatus = function(running, msg, step, total) {
 };
 
 </script>
+<div class="kc-overlay" id="keyConfigOverlay" onclick="closeKeyConfig()"></div>
+<div class="kc-modal" id="keyConfigModal">
+  <h3>Key Bindings</h3>
+  <div class="kc-row"><label>Next plate:</label><div class="kc-btn" id="keyCfgNext" onclick="startCapture('next')">W</div></div>
+  <div class="kc-row"><label>Prev plate:</label><div class="kc-btn" id="keyCfgPrev" onclick="startCapture('prev')">S</div></div>
+  <div class="kc-row"><label>Move left:</label><div class="kc-btn" id="keyCfgDir1" onclick="startCapture('dir1')">A</div></div>
+  <div class="kc-row"><label>Move right:</label><div class="kc-btn" id="keyCfgDir2" onclick="startCapture('dir2')">D</div></div>
+  <div class="kc-status" id="keyConfigStatus"></div>
+  <div style="text-align:center;margin-top:10px;"><button class="btn btn-sm" onclick="closeKeyConfig()">OK</button></div>
+</div>
 <div class="guide-overlay" id="guideOverlay" onclick="toggleGuide()"></div>
 <div class="guide-popup" id="guidePopup">
   <div id="guideContent"></div>

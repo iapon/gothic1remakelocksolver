@@ -183,6 +183,19 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .seo-text { margin-top: 25px; padding: 20px; background: #0f1a2e; border-radius: 10px; font-size: 13px; color: #8ecae6; line-height: 1.7; }
 .seo-text h2 { color: #00d4ff; font-size: 15px; margin-bottom: 10px; }
 .seo-text p { margin-bottom: 0; }
+.guide-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:300; }
+.guide-overlay.open { display:block; }
+.guide-popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#16213e; border:1px solid #ffd700; border-radius:12px; padding:24px; z-index:301; max-width:680px; width:90%; max-height:85vh; overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,0.7); }
+.guide-popup.open { display:block; }
+.guide-popup h3 { color:#ffd700; margin-bottom:14px; }
+.guide-popup p { color:#e0e0e0; font-size:13px; line-height:1.7; margin-bottom:10px; }
+.guide-popup .step { display:flex; gap:10px; margin-bottom:10px; align-items:flex-start; }
+.guide-popup .step-num { background:#ffd700; color:#000; font-weight:bold; min-width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.guide-popup .step-text { color:#e0e0e0; font-size:13px; line-height:1.6; }
+.guide-popup .step-text strong { color:#00d4ff; }
+.guide-popup .step-text em { color:#ffd700; font-style:normal; }
+.guide-popup .close-guide { text-align:center; margin-top:16px; }
+.guide-popup ul { color:#e0e0e0; font-size:13px; line-height:1.8; padding-left:20px; margin-bottom:10px; }
 </style>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
@@ -232,6 +245,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <div style="display:flex;align-items:center;gap:12px;">
       <h2 style="margin:0;" id="t_plates">&#128260; Plates</h2>
       <span id="currentRecipeName" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
+      <button class="btn btn-sm" onclick="toggleGuide()" style="margin-left:auto;border-color:#ffd700;color:#ffd700;">? <span id="t_how_to">How to fill</span></button>
     </div>
     <div id="plateConfig" class="plate-list"></div>
   </div>
@@ -284,6 +298,11 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
   <div class="donate-close"><button class="btn btn-sm" onclick="toggleDonate()">Close</button></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="guide-overlay" id="guideOverlay" onclick="toggleGuide()"></div>
+<div class="guide-popup" id="guidePopup">
+  <div id="guideContent"></div>
+  <div class="close-guide"><button class="btn btn-sm" onclick="toggleGuide()" id="t_guide_close">Close</button></div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
@@ -364,6 +383,8 @@ const i18n = {
     cant_go: (n) => `Plate ${n} can't go further!`,
     would_go: (n) => `Plate ${n} would go out of bounds!`,
     address_copied: 'Address copied!',
+    how_to: 'How to fill',
+    guide_close: 'Close',
     seo_title: 'Gothic 1 Remake Chest Opener',
     seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.<br><br><strong>&#127918; Windows Bridge App</strong> — Download the native Windows application to execute solved steps directly in the game via keyboard input. Select the game window, set the delay, and press Execute — the bridge sends key presses (W/S to navigate plates, A/D to move pins) automatically.',
   },
@@ -427,6 +448,8 @@ const i18n = {
     cant_go: (n) => `Пластина ${n} дальше не идёт!`,
     would_go: (n) => `Пластина ${n} выйдет за границы!`,
     address_copied: 'Адрес скопирован!',
+    how_to: 'Как заполнить',
+    guide_close: 'Закрыть',
     seo_title: 'Взлом замков Gothic 1 Remake',
     seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.<br><br><strong>&#127918; Windows Bridge</strong> — Скачайте нативное Windows-приложение для автоматического выполнения шагов прямо в игре. Выберите окно игры, установите задержку и нажмите Execute — bridge автоматически отправляет нажатия клавиш (W/S для навигации по пластинам, A/D для перемещения штырей).',
   }
@@ -437,7 +460,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','how_to','guide_close'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -1186,6 +1209,52 @@ function closeCommunityDropdown() {
   document.getElementById('communitySearch').value = '';
 }
 
+function toggleGuide() {
+  const popup = document.getElementById('guidePopup');
+  const overlay = document.getElementById('guideOverlay');
+  const isOpen = popup.classList.contains('open');
+  if (isOpen) {
+    popup.classList.remove('open');
+    overlay.classList.remove('open');
+  } else {
+    renderGuide();
+    popup.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+
+function renderGuide() {
+  const c = document.getElementById('guideContent');
+  if (lang === 'ru') {
+    c.innerHTML = `<h3>Как заполнять таблицу эффектов</h3>
+<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это подвижный элемент замка, который можно сдвигать влево или вправо.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1–7). Цель — сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов показывает, <strong>как сдвиг одной пластины влияет на другие</strong>. Строка = пластина, которую вы сдвигаете. Столбец = пластина, которая сдвигается вместе с ней.</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-text">Для каждой пары пластин выберите:<ul>
+<li><strong>—</strong> (пусто) — пластины не связаны</li>
+<li><strong>→ Same</strong> — при сдвиге пластины-строки влево, пластина-столбец тоже сдвигается <em>влево</em> (и наоборот — вправо → вправо)</li>
+<li><strong>← Opp</strong> — при сдвиге пластины-строки влево, пластина-столбец сдвигается <em>вправо</em> (и наоборот)</li>
+</ul></div></div>
+<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Пример:</strong> Если P1 → Same стоит на пересечении строки P1 и столбца P3, значит: при сдвиге P1 влево, P3 тоже сдвигается влево. При сдвиге P1 вправо — P3 тоже вправо.</div></div>
+<div class="step"><div class="step-num">6</div><div class="step-text">Диагональные ячейки (строка = столбец) всегда пустые — пластина не влияет сама на себя.</div></div>
+<div class="step"><div class="step-num">7</div><div class="step-text">Нажмите <strong>Find Solution</strong> — алгоритм BFS найдёт кратчайшую последовательность сдвигов.</div></div>
+<p style="color:#8ecae6;margin-top:12px;">Подсказка: загрузите рецепт из сообщества или из JSON-файла, чтобы не заполнять вручную!</p>`;
+  } else {
+    c.innerHTML = `<h3>How to fill the effects matrix</h3>
+<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a movable element in the lock that can be shifted left or right.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin's <strong>starting position</strong> (1–7). The goal is to shift all pins to the <strong>center</strong> (position 4).</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-text">The effects table shows <strong>how shifting one plate affects others</strong>. Row = the plate you shift. Column = the plate that shifts along with it.</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-text">For each plate pair, choose:<ul>
+<li><strong>—</strong> (none) — plates are not linked</li>
+<li><strong>→ Same</strong> — when you shift the row plate left, the column plate also shifts <em>left</em> (and right → right)</li>
+<li><strong>← Opp</strong> — when you shift the row plate left, the column plate shifts <em>right</em> (and vice versa)</li>
+</ul></div></div>
+<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Example:</strong> If P1 → Same is set at row P1, column P3, it means: when you shift P1 left, P3 also shifts left. When you shift P1 right, P3 also shifts right.</div></div>
+<div class="step"><div class="step-num">6</div><div class="step-text">Diagonal cells (where row = column) are always empty — a plate cannot affect itself.</div></div>
+<div class="step"><div class="step-num">7</div><div class="step-text">Press <strong>Find Solution</strong> — the BFS algorithm finds the shortest sequence of shifts.</div></div>
+<p style="color:#8ecae6;margin-top:12px;">Tip: load a recipe from the community or a JSON file to avoid filling manually!</p>`;
+  }
+}
 </script>
 </body>
 </html>

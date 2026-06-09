@@ -674,7 +674,7 @@ func main() {
 	<-serverReady
 
 	wv = webview2.NewWithOptions(webview2.WebViewOptions{
-		Debug:     true,
+		Debug:     false,
 		AutoFocus: true,
 		WindowOptions: webview2.WindowOptions{
 			Title:  "Gothic 1 Remake - Lock Picker Bridge",

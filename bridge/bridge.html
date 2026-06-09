@@ -887,15 +887,18 @@ function highlightMove() {
 function updateStepCounter() {
   const el = document.getElementById('stepCounter');
   const mv = document.getElementById('stepMove');
+  if (!el) return;
   if (!solution || solution.length === 0) {
     el.textContent = '— / —';
-    mv.textContent = '';
+    if (mv) mv.textContent = '';
   } else {
     el.textContent = `${stepIndex} / ${solution.length}`;
-    if (stepIndex < solution.length) {
-      mv.textContent = `\u2192 ${solution[stepIndex].desc}`;
-    } else {
-      mv.textContent = t('done');
+    if (mv) {
+      if (stepIndex < solution.length) {
+        mv.textContent = `\u2192 ${solution[stepIndex].desc}`;
+      } else {
+        mv.textContent = t('done');
+      }
     }
   }
 }

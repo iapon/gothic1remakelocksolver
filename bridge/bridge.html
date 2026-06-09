@@ -234,20 +234,20 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
   </div>
 
   <div class="panel" id="bridgePanel" style="border: 1px solid #e94560;">
-    <h2 style="color: #e94560;">&#127918; Bridge — Execute in Game</h2>
+    <h2 style="color: #e94560;">&#127918; <span id="t_bridge_title">Bridge — Execute in Game</span></h2>
     <div class="config-row">
-      <label>Target Window:</label>
+      <label id="t_target_window">Target Window:</label>
       <select id="bridgeWindow" style="min-width:300px;max-width:500px;" onchange="bridgeSetTarget(this.value)"></select>
-      <button class="btn btn-sm" onclick="bridgeRefreshWindows()">&#8635; Refresh</button>
+      <button class="btn btn-sm" onclick="bridgeRefreshWindows()">&#8635; <span id="t_refresh_win">Refresh</span></button>
     </div>
     <div class="config-row">
-      <label>Delay:</label>
+      <label id="t_delay">Delay:</label>
       <input type="range" id="bridgeDelay" min="50" max="1500" value="300" style="width:160px;" oninput="bridgeSetDelay(this.value)">
       <span id="bridgeDelayVal" style="color:#ffd700;font-size:13px;">300ms</span>
     </div>
     <div class="controls">
-      <button class="btn btn-game" onclick="bridgeExecute()" style="font-size:16px;padding:10px 30px;">&#9654; Execute in Game</button>
-      <button class="btn btn-danger" id="bridgeStopBtn" onclick="bridgeStop()" style="display:none;font-size:16px;padding:10px 24px;">&#9632; Stop</button>
+      <button class="btn btn-game" onclick="bridgeExecute()" style="font-size:16px;padding:10px 30px;">&#9654; <span id="t_execute_game">Execute in Game</span></button>
+      <button class="btn btn-danger" id="bridgeStopBtn" onclick="bridgeStop()" style="display:none;font-size:16px;padding:10px 24px;">&#9632; <span id="t_stop">Stop</span></button>
       <span id="bridgeExecStatus" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
     </div>
   </div>
@@ -374,6 +374,15 @@ const i18n = {
     bridge_error: 'Bridge not running! Open lock-picker-bridge.exe first',
     copy_steps: 'Copy Steps',
     steps_copied: 'Steps copied to clipboard!',
+    bridge_title: 'Bridge — Execute in Game',
+    target_window: 'Target Window:',
+    delay: 'Delay:',
+    refresh: 'Refresh',
+    execute_game: 'Execute in Game',
+    stop: 'Stop',
+    executing_steps: 'Executing...',
+    done: 'Done',
+    stopped: 'Stopped',
     seo_title: 'Gothic 1 Remake Chest Opener',
     seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.',
   },
@@ -444,6 +453,15 @@ const i18n = {
     bridge_error: 'Бридж не запущен! Сначала откройте lock-picker-bridge.exe',
     copy_steps: 'Копировать шаги',
     steps_copied: 'Шаги скопированы!',
+    bridge_title: 'Bridge — Выполнить в игре',
+    target_window: 'Окно:',
+    delay: 'Задержка:',
+    refresh: 'Обновить',
+    execute_game: 'Выполнить в игре',
+    stop: 'Стоп',
+    executing_steps: 'Выполнение...',
+    done: 'Готово',
+    stopped: 'Остановлено',
     seo_title: 'Взлом замков Gothic 1 Remake',
     seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.',
   }
@@ -454,7 +472,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','refresh_win','execute_game','stop'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');

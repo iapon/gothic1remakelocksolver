@@ -250,8 +250,6 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <span id="stepCounter" class="step-counter">— / —</span>
       <span id="stepMove" class="step-move"></span>
       <button class="btn" onclick="stepForward()">&#9654;</button>
-      <button class="btn btn-game" onclick="copySteps()" id="t_copy_steps">&#128203; Copy Steps</button>
-      <button class="btn btn-game" onclick="playInGame()" id="t_play_game">&#127918; Execute in Game</button>
     </div>
     <div id="status" class="status idle">Ready</div>
     <div id="plateVisual"></div>
@@ -366,13 +364,6 @@ const i18n = {
     cant_go: (n) => `Plate ${n} can't go further!`,
     would_go: (n) => `Plate ${n} would go out of bounds!`,
     address_copied: 'Address copied!',
-    play_game: 'Play in Game',
-    solve_first: 'Solve first!',
-    already_executing: 'Already executing',
-    executing: 'Sending to game...',
-    bridge_error: 'Bridge not running! Open lock-picker-bridge.exe first',
-    copy_steps: 'Copy Steps',
-    steps_copied: 'Steps copied to clipboard!',
     seo_title: 'Gothic 1 Remake Chest Opener',
     seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.<br><br><strong>&#127918; Windows Bridge App</strong> — Download the native Windows application to execute solved steps directly in the game via keyboard input. Select the game window, set the delay, and press Execute — the bridge sends key presses (W/S to navigate plates, A/D to move pins) automatically.',
   },
@@ -436,13 +427,6 @@ const i18n = {
     cant_go: (n) => `Пластина ${n} дальше не идёт!`,
     would_go: (n) => `Пластина ${n} выйдет за границы!`,
     address_copied: 'Адрес скопирован!',
-    play_game: 'Играть в игре',
-    solve_first: 'Сначала решите!',
-    already_executing: 'Уже выполняется',
-    executing: 'Отправляем в игру...',
-    bridge_error: 'Бридж не запущен! Сначала откройте lock-picker-bridge.exe',
-    copy_steps: 'Копировать шаги',
-    steps_copied: 'Шаги скопированы!',
     seo_title: 'Взлом замков Gothic 1 Remake',
     seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.<br><br><strong>&#127918; Windows Bridge</strong> — Скачайте нативное Windows-приложение для автоматического выполнения шагов прямо в игре. Выберите окно игры, установите задержку и нажмите Execute — bridge автоматически отправляет нажатия клавиш (W/S для навигации по пластинам, A/D для перемещения штырей).',
   }
@@ -453,7 +437,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -907,46 +891,6 @@ function toggleDonate() {
 function copyAddr(id) {
   const text = document.getElementById(id).textContent;
   navigator.clipboard.writeText(text).then(() => showToast(t('copied')));
-}
-
-function copySteps() {
-  if (!solution || solution.length === 0) {
-    showToast(t('solve_first'));
-    return;
-  }
-  const recipe = {
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
-    steps: solution.map(s => ({plate: s.plate, dir: s.dir}))
-  };
-  navigator.clipboard.writeText(JSON.stringify(recipe, null, 2)).then(() => showToast(t('steps_copied')));
-}
-
-async function playInGame() {
-  if (!solution || solution.length === 0) {
-    showToast(t('solve_first'));
-    return;
-  }
-  const steps = solution.map(s => ({plate: s.plate, dir: s.dir}));
-  try {
-    const r = await fetch('http://localhost:8765/api/execute', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        numPlates,
-        startPlate: 0,
-        steps
-      })
-    });
-    if (r.status === 409) {
-      showToast(t('already_executing'));
-      return;
-    }
-    if (!r.ok) throw new Error();
-    showToast(t('executing'));
-  } catch(e) {
-    showToast(t('bridge_error'));
-  }
 }
 
 function loadPreset() {

@@ -235,30 +235,17 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <button class="btn btn-sm btn-danger" onclick="resetAll()" id="t_reset_all">Reset All</button>
     </div>
     <div class="recipe-box" style="display:flex;gap:12px;align-items:flex-start;">
-      <div style="flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;align-items:center;">
-        <label id="t_recipe">Recipe:</label>
-        <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
-        <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
-        <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
-        <div class="search-wrap">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <label id="t_recipe">Recipe:</label>
+          <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')openSaveModal()" style="flex:1;min-width:140px;">
+          <button class="btn btn-sm" onclick="openSaveModal()" id="t_save">&#128190; Save</button>
+          <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
+        </div>
+        <div class="search-wrap" style="margin-top:6px;">
           <span class="search-icon">&#128269;</span>
-          <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
-          <div class="search-dropdown" id="recipeDropdown"></div>
-        </div>
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" onclick="exportRecipe()" id="t_download">&#11015; Download</button>
-          <label class="btn btn-sm" style="cursor:pointer;" id="t_upload">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
-        </div>
-        <label style="color:#0f0;">&#127760; <span id="t_community">Community</span>:</label>
-        <div class="search-wrap">
-          <span class="search-icon">&#128269;</span>
-          <input type="text" class="search-input" id="communitySearch" placeholder="Search community..." oninput="filterCommunity()" onfocus="openCommunityDropdown()" onclick="event.stopPropagation()">
-          <div class="search-dropdown" id="communityDropdown"></div>
-        </div>
-        <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm" onclick="exportAllRecipes()" id="t_download_all">&#11015; All</button>
-          <label class="btn btn-sm" style="cursor:pointer;" id="t_upload_all">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
+          <input type="text" class="search-input" id="unifiedSearch" placeholder="Search recipes..." oninput="filterUnified()" onfocus="openUnifiedDropdown()" onclick="event.stopPropagation()">
+          <div class="search-dropdown" id="unifiedDropdown"></div>
         </div>
       </div>
       <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
@@ -316,15 +303,15 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 </div>
 <div class="share-overlay" id="shareOverlay" onclick="closeShareModal()"></div>
 <div class="share-popup" id="sharePopup">
-  <h3 id="t_share_title">&#127760; Share to Community</h3>
+  <h3 id="t_save_title">&#128190; Save Recipe</h3>
   <div class="share-drop" id="shareDrop" onclick="document.getElementById('shareFileInput').click()">
-    <span id="t_share_drop">&#128247; Paste (Ctrl+V) or click to attach screenshot</span>
+    <span id="t_save_drop">&#128247; Paste (Ctrl+V) or click to attach screenshot</span>
     <img id="shareDropImg" style="display:none">
     <input type="file" id="shareFileInput" accept="image/*" style="display:none" onchange="handleShareFile(event)">
   </div>
   <div class="share-actions">
-    <button class="btn" onclick="doShare(true)" style="border-color:#0f0;color:#0f0;" id="t_share_with">&#128247; Share with screenshot</button>
-    <button class="btn" onclick="doShare(false)" id="t_share_without">&#127760; Share without</button>
+    <button class="btn" onclick="doSave('local')" id="t_save_local">&#128190; Save locally</button>
+    <button class="btn" onclick="doSave('community')" style="border-color:#0f0;color:#0f0;" id="t_save_community">&#127760; Share to community</button>
     <button class="btn" onclick="closeShareModal()" id="t_cancel">Cancel</button>
   </div>
 </div>
@@ -388,7 +375,7 @@ function compressScreenshot(file) {
 
 function showShareImg(b64) {
   const drop = document.getElementById('shareDrop');
-  const txt = document.getElementById('t_share_drop');
+  const txt = document.getElementById('t_save_drop');
   const img = document.getElementById('shareDropImg');
   if (b64) {
     img.src = b64;
@@ -423,11 +410,9 @@ function handleSharePaste(e) {
 
 document.addEventListener('paste', handleSharePaste);
 
-function submitToCommunity() {
+function openSaveModal() {
   const name = document.getElementById('recipeName').value.trim();
   if (!name) { showToast(t('enter_first')); return; }
-  const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
-  if (existing) { showToast(t('exists')(name)); return; }
   shareScreenshot = null;
   showShareImg(null);
   shareModalOpen = true;
@@ -441,24 +426,36 @@ function closeShareModal() {
   document.getElementById('sharePopup').classList.remove('open');
 }
 
-async function doShare(withScreenshot) {
+async function doSave(dest) {
   const name = document.getElementById('recipeName').value.trim();
   const data = {
     name,
     numPlates, numPositions, center,
     plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
     steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
-    screenshot: withScreenshot ? shareScreenshot : null,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    screenshot: shareScreenshot || null
   };
-  try {
-    await db.collection('recipes').add(data);
-    showToast(t('shared')(name));
+  if (dest === 'local') {
+    let saved = JSON.parse(localStorage.getItem('lockRecipes') || '[]');
+    const idx = saved.findIndex(r => r.name.toLowerCase() === name.toLowerCase());
+    if (idx >= 0) saved[idx] = data; else saved.push(data);
+    localStorage.setItem('lockRecipes', JSON.stringify(saved));
+    showToast(t('saved_local')(name));
     closeShareModal();
-    loadCommunity();
-  } catch(e) {
-    showToast(t('share_err'));
-    console.error(e);
+    filterUnified();
+  } else {
+    const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
+    if (existing) { showToast(t('exists')(name)); return; }
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    try {
+      await db.collection('recipes').add(data);
+      showToast(t('shared')(name));
+      closeShareModal();
+      loadCommunity();
+    } catch(e) {
+      showToast(t('share_err'));
+      console.error(e);
+    }
   }
 }
 
@@ -473,20 +470,14 @@ const i18n = {
     reset_all: 'Reset All',
     recipe: 'Recipe:',
     recipe_ph: 'Recipe name...',
-    save: 'Save',
-    share: 'Share',
-    share_title: '&#127760; Share to Community',
-    share_drop: '&#128247; Paste (Ctrl+V) or click to attach screenshot',
-    share_with: '&#128247; Share with screenshot',
-    share_without: '&#127760; Share without',
+    save: '\u{1F4BE} Save',
+    save_title: '\u{1F4BE} Save Recipe',
+    save_drop: '\u{1F4F7} Paste (Ctrl+V) or click to attach screenshot',
+    save_local: '\u{1F4BE} Save locally',
+    save_community: '\u{1F310} Share to community',
+    saved_local: n => `${n} saved locally`,
     cancel: 'Cancel',
-    search_local: 'Search local...',
-    download: '\u2B07 Download',
-    upload: '\u2B06 Upload',
-    download_all: '\u2B07 All',
-    upload_all: '\u2B06 All',
-    community: 'Community',
-    search_community: 'Search community...',
+    search_recipes: 'Search recipes...',
     refresh: '\u21BB Refresh',
     plates: '\u{1F504} Plates',
     solve: '\u{1F50D} Solve',
@@ -568,20 +559,14 @@ const i18n = {
     reset_all: 'Сбросить всё',
     recipe: 'Рецепт:',
     recipe_ph: 'Имя рецепта...',
-    save: 'Сохранить',
-    share: 'Поделиться',
-    share_title: '&#127760; Поделиться с сообществом',
-    share_drop: '&#128247; Вставьте (Ctrl+V) или нажмите для скриншота',
-    share_with: '&#128247; Поделиться со скриншотом',
-    share_without: '&#127760; Поделиться без скриншота',
+    save: '\u{1F4BE} Сохранить',
+    save_title: '\u{1F4BE} Сохранить рецепт',
+    save_drop: '\u{1F4F7} Вставьте (Ctrl+V) или нажмите для скриншота',
+    save_local: '\u{1F4BE} Сохранить локально',
+    save_community: '\u{1F310} Поделиться с сообществом',
+    saved_local: n => `${n} сохранён локально`,
     cancel: 'Отмена',
-    search_local: 'Поиск локальных...',
-    download: '\u2B07 Скачать',
-    upload: '\u2B06 Загрузить',
-    download_all: '\u2B07 Скачать все',
-    upload_all: '\u2B06 Загрузить все',
-    community: 'Сообщество',
-    search_community: 'Поиск в сообществе...',
+    search_recipes: 'Поиск рецептов...',
     refresh: '\u21BB Обновить',
     plates: '\u{1F504} Пластины',
     solve: '\u{1F50D} Решение',
@@ -663,7 +648,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','share_title','share_drop','share_with','share_without','cancel','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','how_to','guide_close','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -1191,31 +1176,80 @@ function loadPreset() {
 
 // ---- Recipes (localStorage) ----
 function getRecipes() {
-  try { return JSON.parse(localStorage.getItem('lockRecipes') || '{}'); }
-  catch(e) { return {}; }
+  try {
+    const d = JSON.parse(localStorage.getItem('lockRecipes') || '[]');
+    return Array.isArray(d) ? d : Object.entries(d).map(([name, v]) => ({name, ...v}));
+  } catch(e) { return []; }
 }
 
-function saveRecipes(r) {
-  localStorage.setItem('lockRecipes', JSON.stringify(r));
+function deleteRecipe(name) {
+  event.stopPropagation();
+  let saved = getRecipes();
+  saved = saved.filter(r => r.name !== name);
+  localStorage.setItem('lockRecipes', JSON.stringify(saved));
+  filterUnified();
+  showToast(t('deleted')(name));
 }
 
-function saveRecipe() {
-  const name = document.getElementById('recipeName').value.trim();
-  if (!name) { showToast(t('enter_name')); return; }
+function filterUnified() {
+  const dropdown = document.getElementById('unifiedDropdown');
+  const query = document.getElementById('unifiedSearch').value.toLowerCase();
+  const local = getRecipes();
+  const localFiltered = local.filter(r => r.name.toLowerCase().includes(query));
+  const communityFiltered = communityRecipes.filter(r => r.name.toLowerCase().includes(query));
+  dropdown.innerHTML = '';
+  if (localFiltered.length === 0 && communityFiltered.length === 0) {
+    dropdown.innerHTML = '<div class="search-empty">' + ((local.length + communityRecipes.length) === 0 ? t('no_recipes') : t('no_matches')) + '</div>';
+  } else {
+    for (const r of localFiltered) {
+      const item = document.createElement('div');
+      item.className = 'search-item';
+      const info = `${r.numPlates}P / ${r.numPositions || 7}pos`;
+      const safe = r.name.replace(/'/g, "\\'");
+      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb">' : '';
+      item.innerHTML = `${thumb}<span class="si-name" onclick="loadLocalRecipe('${safe}')">${r.name}</span><span class="si-info" style="color:#8ecae6;">&#128190; ${info}</span><span class="si-del" onclick="event.stopPropagation();deleteRecipe('${safe}')">&#10006;</span>`;
+      if (r.screenshot) {
+        item.dataset.ss = r.screenshot;
+        item.addEventListener('mouseenter', showSsPreview);
+        item.addEventListener('mousemove', moveSsPreview);
+        item.addEventListener('mouseleave', hideSsPreview);
+      }
+      dropdown.appendChild(item);
+    }
+    for (const r of communityFiltered) {
+      const item = document.createElement('div');
+      item.className = 'search-item';
+      const info = `${r.numPlates}P / ${r.numPositions}pos`;
+      const rid = r.id;
+      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb">' : '';
+      item.innerHTML = `${thumb}<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info" style="color:#0f0;">&#127760; ${info}</span>`;
+      if (r.screenshot) {
+        item.dataset.ss = r.screenshot;
+        item.addEventListener('mouseenter', showSsPreview);
+        item.addEventListener('mousemove', moveSsPreview);
+        item.addEventListener('mouseleave', hideSsPreview);
+      }
+      dropdown.appendChild(item);
+    }
+  }
+}
+
+function openUnifiedDropdown() {
+  document.getElementById('unifiedDropdown').classList.add('open');
+}
+
+function closeUnifiedDropdown() {
+  document.getElementById('unifiedDropdown').classList.remove('open');
+  document.getElementById('unifiedSearch').value = '';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) closeUnifiedDropdown();
+});
+
+function loadLocalRecipe(name) {
   const recipes = getRecipes();
-  recipes[name] = {
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
-  };
-  saveRecipes(recipes);
-  document.getElementById('recipeName').value = '';
-  renderRecipeList();
-  showToast(t('saved')(name));
-}
-
-function loadRecipe(name) {
-  const recipes = getRecipes();
-  const r = recipes[name];
+  const r = recipes.find(x => x.name === name);
   if (!r) return;
   numPlates = r.numPlates;
   numPositions = r.numPositions || 7;
@@ -1228,240 +1262,19 @@ function loadRecipe(name) {
   autoSolve();
   solutionStates = [];
   document.getElementById('solutionBox').style.display = 'none';
-  showRecipeName(name);
+  if (r.name) document.getElementById('recipeName').value = r.name;
+  showRecipeName(r.name);
+  const loaded = document.getElementById('loadedSs');
+  if (r.screenshot) {
+    loaded.innerHTML = '<img src="' + r.screenshot + '" style="max-width:100%;border-radius:6px;cursor:pointer;" onclick="window.open(this.src)">';
+    loaded.style.display = 'block';
+  } else {
+    loaded.innerHTML = '';
+    loaded.style.display = 'none';
+  }
+  hideSsPreview();
+  closeUnifiedDropdown();
   setStatus('idle', t('loaded')(name));
-}
-
-function deleteRecipe(name) {
-  event.stopPropagation();
-  const recipes = getRecipes();
-  delete recipes[name];
-  saveRecipes(recipes);
-  renderRecipeList();
-  showToast(t('deleted')(name));
-}
-
-function renderRecipeList() {
-  filterRecipes();
-}
-
-function filterRecipes() {
-  const dropdown = document.getElementById('recipeDropdown');
-  const query = document.getElementById('recipeSearch').value.toLowerCase();
-  const recipes = getRecipes();
-  const names = Object.keys(recipes).sort();
-  const filtered = names.filter(n => n.toLowerCase().includes(query));
-
-  dropdown.innerHTML = '';
-  if (filtered.length === 0) {
-    dropdown.innerHTML = '<div class="search-empty">' + (names.length === 0 ? t('no_recipes') : t('no_matches')) + '</div>';
-  } else {
-    for (const name of filtered) {
-      const r = recipes[name];
-      const info = `${r.numPlates}P / ${r.numPositions}pos`;
-      const item = document.createElement('div');
-      item.className = 'search-item';
-      const safe = name.replace(/'/g, "\\'");
-      item.innerHTML = `<span class="si-name" onclick="loadRecipe('${safe}');closeDropdown()">${name}</span><span class="si-info">${info}</span><span class="si-del" onclick="event.stopPropagation();deleteRecipe('${safe}')">&#10006;</span>`;
-      dropdown.appendChild(item);
-    }
-  }
-}
-
-function openDropdown() {
-  document.getElementById('recipeDropdown').classList.add('open');
-}
-
-function closeDropdown() {
-  document.getElementById('recipeDropdown').classList.remove('open');
-  document.getElementById('recipeSearch').value = '';
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) { closeDropdown(); closeCommunityDropdown(); }
-});
-
-function exportRecipe() {
-  const name = document.getElementById('recipeName').value.trim() || 'lock_recipe';
-  const data = {
-    name,
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))}))
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function importRecipe(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      numPlates = data.numPlates;
-      numPositions = data.numPositions || 7;
-      center = data.center !== undefined ? data.center : 3;
-      document.getElementById('numPlates').value = numPlates;
-      plates = data.plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e2 => ({...e2}))}));
-      currentPins = plates.map(p => p.initPin);
-      renderConfig();
-      renderVisual();
-      autoSolve();
-      solutionStates = [];
-      document.getElementById('solutionBox').style.display = 'none';
-      if (data.name) document.getElementById('recipeName').value = data.name;
-      showRecipeName(data.name || '');
-      setStatus('idle', t('imported')(data.name || file.name));
-    } catch(err) {
-      showToast(t('invalid_file'));
-    }
-  };
-  reader.readAsText(file);
-  ev.target.value = '';
-}
-
-function exportAllRecipes() {
-  const recipes = getRecipes();
-  const names = Object.keys(recipes);
-  if (names.length === 0) { showToast(t('no_export')); return; }
-  const blob = new Blob([JSON.stringify(recipes, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'all_recipes.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function importAllRecipes(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      const recipes = getRecipes();
-      let count = 0;
-      for (const [name, recipe] of Object.entries(data)) {
-        if (recipe.numPlates && recipe.plates) {
-          recipes[name] = recipe;
-          count++;
-        }
-      }
-      saveRecipes(recipes);
-      renderRecipeList();
-      showToast(t('imported_all')(count));
-    } catch(err) {
-      showToast(t('invalid_file'));
-    }
-  };
-  reader.readAsText(file);
-  ev.target.value = '';
-}
-
-function resetAll() {
-  if (!confirm(t('reset_confirm'))) return;
-  loadPreset();
-  showRecipeName('');
-  renderRecipeList();
-}
-
-// Init
-applyLang();
-loadPreset();
-renderRecipeList();
-loadCommunity();
-
-// ---- Community (Firebase) ----
-async function loadCommunity() {
-  if (!db) return;
-  try {
-    const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
-    communityRecipes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    filterCommunity();
-  } catch(e) {
-    console.error('Community load error', e);
-  }
-}
-
-function toggleGuide() {
-  const popup = document.getElementById('guidePopup');
-  const overlay = document.getElementById('guideOverlay');
-  const isOpen = popup.classList.contains('open');
-  if (isOpen) {
-    popup.classList.remove('open');
-    overlay.classList.remove('open');
-  } else {
-    renderGuide();
-    popup.classList.add('open');
-    overlay.classList.add('open');
-  }
-}
-
-function renderGuide() {
-  const c = document.getElementById('guideContent');
-  if (lang === 'ru') {
-    c.innerHTML = `<h3>Как заполнять таблицу эффектов</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3–8) в верхней панели Configuration. Каждая пластина — это подвижный элемент замка, который можно сдвигать влево или вправо.</div></div>
-<div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1–7). Цель — сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div>
-<div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов показывает, <strong>как сдвиг одной пластины влияет на другие</strong>. Строка = пластина, которую вы сдвигаете. Столбец = пластина, которая сдвигается вместе с ней.</div></div>
-<div class="step"><div class="step-num">4</div><div class="step-text">Для каждой пары пластин выберите:<ul>
-<li><strong>—</strong> (пусто) — пластины не связаны</li>
-<li><strong>→ Same</strong> — при сдвиге пластины-строки влево, пластина-столбец тоже сдвигается <em>влево</em> (и наоборот — вправо → вправо)</li>
-<li><strong>← Opp</strong> — при сдвиге пластины-строки влево, пластина-столбец сдвигается <em>вправо</em> (и наоборот)</li>
-</ul></div></div>
-<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Пример:</strong> Если P1 → Same стоит на пересечении строки P1 и столбца P3, значит: при сдвиге P1 влево, P3 тоже сдвигается влево. При сдвиге P1 вправо — P3 тоже вправо.</div></div>
-<div class="step"><div class="step-num">6</div><div class="step-text">Диагональные ячейки (строка = столбец) всегда пустые — пластина не влияет сама на себя.</div></div>
-<div class="step"><div class="step-num">7</div><div class="step-text">Решение считается <strong>автоматически</strong> при любом изменении. Алгоритм BFS найдёт кратчайшую последовательность сдвигов.</div></div>
-<p style="color:#8ecae6;margin-top:12px;">Подсказка: загрузите рецепт из сообщества или из JSON-файла, чтобы не заполнять вручную!</p>`;
-  } else {
-    c.innerHTML = `<h3>How to fill the effects matrix</h3>
-<div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3–8) in the Configuration panel above. Each plate is a movable element in the lock that can be shifted left or right.</div></div>
-<div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin's <strong>starting position</strong> (1–7). The goal is to shift all pins to the <strong>center</strong> (position 4).</div></div>
-<div class="step"><div class="step-num">3</div><div class="step-text">The effects table shows <strong>how shifting one plate affects others</strong>. Row = the plate you shift. Column = the plate that shifts along with it.</div></div>
-<div class="step"><div class="step-num">4</div><div class="step-text">For each plate pair, choose:<ul>
-<li><strong>—</strong> (none) — plates are not linked</li>
-<li><strong>→ Same</strong> — when you shift the row plate left, the column plate also shifts <em>left</em> (and right → right)</li>
-<li><strong>← Opp</strong> — when you shift the row plate left, the column plate shifts <em>right</em> (and vice versa)</li>
-</ul></div></div>
-<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Example:</strong> If P1 → Same is set at row P1, column P3, it means: when you shift P1 left, P3 also shifts left. When you shift P1 right, P3 also shifts right.</div></div>
-<div class="step"><div class="step-num">6</div><div class="step-text">Diagonal cells (where row = column) are always empty — a plate cannot affect itself.</div></div>
-<div class="step"><div class="step-num">7</div><div class="step-text">The solution is computed <strong>automatically</strong> on every change. The BFS algorithm finds the shortest sequence of shifts.</div></div>
-<p style="color:#8ecae6;margin-top:12px;">Tip: load a recipe from the community or a JSON file to avoid filling manually!</p>`;
-  }
-}
-
-
-function filterCommunity() {
-  const dropdown = document.getElementById('communityDropdown');
-  const query = document.getElementById('communitySearch').value.toLowerCase();
-  const filtered = communityRecipes.filter(r => r.name.toLowerCase().includes(query));
-
-  dropdown.innerHTML = '';
-  if (filtered.length === 0) {
-    dropdown.innerHTML = '<div class="search-empty">' + (communityRecipes.length === 0 ? t('no_community') : t('no_matches')) + '</div>';
-  } else {
-    for (const r of filtered) {
-      const item = document.createElement('div');
-      item.className = 'search-item';
-      const info = `${r.numPlates}P / ${r.numPositions}pos`;
-      const safe = (r.name || '').replace(/'/g, "\\'");
-      const rid = r.id;
-      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb" onclick="event.stopPropagation();loadCommunityRecipe(\'' + rid + '\')">' : '';
-      item.innerHTML = `${thumb}<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span>`;
-      if (r.screenshot) {
-        item.dataset.ss = r.screenshot;
-        item.addEventListener('mouseenter', showSsPreview);
-        item.addEventListener('mousemove', moveSsPreview);
-        item.addEventListener('mouseleave', hideSsPreview);
-      }
-      dropdown.appendChild(item);
-    }
-  }
 }
 
 function loadCommunityRecipe(id) {
@@ -1489,7 +1302,7 @@ function loadCommunityRecipe(id) {
     loaded.style.display = 'none';
   }
   hideSsPreview();
-  closeCommunityDropdown();
+  closeUnifiedDropdown();
 }
 
 function showSsPreview(e) {
@@ -1501,7 +1314,7 @@ function showSsPreview(e) {
 }
 function moveSsPreview(e) {
   const el = document.getElementById('ssPreview');
-  const r = document.getElementById('communityDropdown').getBoundingClientRect();
+  const r = document.getElementById('unifiedDropdown').getBoundingClientRect();
   let x = r.right + 10;
   if (x + 610 > window.innerWidth) x = r.left - 610;
   el.style.left = x + 'px';
@@ -1511,14 +1324,28 @@ function hideSsPreview() {
   document.getElementById('ssPreview').classList.remove('visible');
 }
 
-function openCommunityDropdown() {
-  document.getElementById('communityDropdown').classList.add('open');
+function resetAll() {
+  if (!confirm(t('reset_confirm'))) return;
+  loadPreset();
+  showRecipeName('');
+  filterUnified();
 }
 
-function closeCommunityDropdown() {
-  document.getElementById('communityDropdown').classList.remove('open');
-  document.getElementById('communitySearch').value = '';
+async function loadCommunity() {
+  try {
+    const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
+    communityRecipes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    filterUnified();
+  } catch(e) {
+    console.error('Community load error', e);
+  }
 }
+
+// Init
+applyLang();
+loadPreset();
+filterUnified();
+loadCommunity();
 
 // === Bridge-specific (native Go bindings) ===
 const isBridge = typeof window.execute === 'function';

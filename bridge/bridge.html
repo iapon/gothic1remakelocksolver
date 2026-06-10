@@ -1591,6 +1591,29 @@ window.updateExecStatus = function(running, msg, step, total) {
   }
 };
 
+function toggleGuide() {
+  var popup = document.getElementById('guidePopup');
+  var overlay = document.getElementById('guideOverlay');
+  var isOpen = popup.classList.contains('open');
+  if (isOpen) {
+    popup.classList.remove('open');
+    overlay.classList.remove('open');
+  } else {
+    renderGuide();
+    popup.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+
+function renderGuide() {
+  var c = document.getElementById('guideContent');
+  if (lang === 'ru') {
+    c.innerHTML = '<h3>Как заполнять таблицу эффектов</h3><div class="step"><div class="step-num">1</div><div class="step-text">Выберите количество <strong>пластин</strong> (3\u20138) в верхней панели Configuration. Каждая пластина \u2014 это подвижный элемент замка, который можно сдвигать влево или вправо.</div></div><div class="step"><div class="step-num">2</div><div class="step-text">В строке <em>Pin</em> (штырь) выберите <strong>начальную позицию</strong> каждого штыря (1\u20137). Цель \u2014 сдвинуть все штыри в <strong>центр</strong> (позиция 4).</div></div><div class="step"><div class="step-num">3</div><div class="step-text">Таблица эффектов показывает, <strong>как сдвиг одной пластины влияет на другие</strong>. Строка = пластина, которую вы сдвигаете. Столбец = пластина, которая сдвигается вместе с ней.</div></div><div class="step"><div class="step-num">4</div><div class="step-text">Для каждой пары пластин выберите:<ul><li><strong>\u2014</strong> (пусто) \u2014 пластины не связаны</li><li><strong>\u2192 Same</strong> \u2014 при сдвиге пластины-строки влево, пластина-столбец тоже сдвигается <em>влево</em> (и наоборот \u2014 вправо \u2192 вправо)</li><li><strong>\u2190 Opp</strong> \u2014 при сдвиге пластины-строки влево, пластина-столбец сдвигается <em>вправо</em> (и наоборот)</li></ul></div></div><div class="step"><div class="step-num">5</div><div class="step-text"><strong>Пример:</strong> Если P1 \u2192 Same стоит на пересечении строки P1 и столбца P3, значит: при сдвиге P1 влево, P3 тоже сдвигается влево. При сдвиге P1 вправо \u2014 P3 тоже вправо.</div></div><div class="step"><div class="step-num">6</div><div class="step-text">Диагональные ячейки (строка = столбец) всегда пустые \u2014 пластина не влияет сама на себя.</div></div><div class="step"><div class="step-num">7</div><div class="step-text">Нажмите <strong>Find Solution</strong> \u2014 алгоритм BFS найдёт кратчайшую последовательность сдвигов.</div></div><p style="color:#8ecae6;margin-top:12px;">Подсказка: загрузите рецепт из сообщества, чтобы не заполнять вручную!</p>';
+  } else {
+    c.innerHTML = '<h3>How to fill the effects matrix</h3><div class="step"><div class="step-num">1</div><div class="step-text">Select the number of <strong>plates</strong> (3\u20138) in the Configuration panel above. Each plate is a movable element in the lock that can be shifted left or right.</div></div><div class="step"><div class="step-num">2</div><div class="step-text">In the <em>Pin</em> row, set each pin\'s <strong>starting position</strong> (1\u20137). The goal is to shift all pins to the <strong>center</strong> (position 4).</div></div><div class="step"><div class="step-num">3</div><div class="step-text">The effects table shows <strong>how shifting one plate affects others</strong>. Row = the plate you shift. Column = the plate that shifts along with it.</div></div><div class="step"><div class="step-num">4</div><div class="step-text">For each plate pair, choose:<ul><li><strong>\u2014</strong> (none) \u2014 plates are not linked</li><li><strong>\u2192 Same</strong> \u2014 when you shift the row plate left, the column plate also shifts <em>left</em> (and right \u2192 right)</li><li><strong>\u2190 Opp</strong> \u2014 when you shift the row plate left, the column plate shifts <em>right</em> (and vice versa)</li></ul></div></div><div class="step"><div class="step-num">5</div><div class="step-text"><strong>Example:</strong> If P1 \u2192 Same is set at row P1, column P3, it means: when you shift P1 left, P3 also shifts left. When you shift P1 right, P3 also shifts right.</div></div><div class="step"><div class="step-num">6</div><div class="step-text">Diagonal cells (where row = column) are always empty \u2014 a plate cannot affect itself.</div></div><div class="step"><div class="step-num">7</div><div class="step-text">Press <strong>Find Solution</strong> \u2014 the BFS algorithm finds the shortest sequence of shifts.</div></div><p style="color:#8ecae6;margin-top:12px;">Tip: load a recipe from the community to avoid filling manually!</p>';
+  }
+}
+
 </script>
 <div class="kc-overlay" id="keyConfigOverlay" onclick="closeKeyConfig()"></div>
 <div class="kc-modal" id="keyConfigModal">

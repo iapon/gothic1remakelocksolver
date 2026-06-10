@@ -255,7 +255,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
           </div>
           <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
         </div>
-        <div id="loadedSs" style="display:none;max-width:180px;flex-shrink:0;"></div>
+        <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
       </div>
     </div>
   </div>
@@ -366,7 +366,7 @@ function compressScreenshot(file) {
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/webp', 0.8));
+      resolve(canvas.toDataURL('image/webp', 0.95));
     };
     img.src = URL.createObjectURL(file);
   });

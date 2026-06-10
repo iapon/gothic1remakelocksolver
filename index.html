@@ -186,7 +186,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .search-item .si-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; margin-right: 8px; cursor: pointer; flex-shrink: 0; }
 .ss-preview { position:fixed; z-index:400; pointer-events:none; opacity:0; transition:opacity 0.15s; }
 .ss-preview.visible { opacity:1; }
-.ss-preview img { max-width:300px; max-height:300px; border-radius:8px; border:2px solid #ffd700; box-shadow:0 4px 20px rgba(0,0,0,0.8); }
+.ss-preview img { max-width:600px; max-height:600px; border-radius:8px; border:2px solid #ffd700; box-shadow:0 4px 20px rgba(0,0,0,0.8); }
 .search-item .si-del { color: #e74c3c; font-size: 14px; padding: 0 4px; margin-left: 8px; }
 .search-item .si-del:hover { color: #ff6b6b; }
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
@@ -1340,9 +1340,9 @@ function moveSsPreview(e) {
   const el = document.getElementById('ssPreview');
   const r = document.getElementById('communityDropdown').getBoundingClientRect();
   let x = r.right + 10;
-  if (x + 310 > window.innerWidth) x = r.left - 310;
+  if (x + 610 > window.innerWidth) x = r.left - 610;
   el.style.left = x + 'px';
-  el.style.top = Math.min(e.clientY, window.innerHeight - 310) + 'px';
+  el.style.top = Math.min(e.clientY, window.innerHeight - 610) + 'px';
 }
 function hideSsPreview() {
   document.getElementById('ssPreview').classList.remove('visible');

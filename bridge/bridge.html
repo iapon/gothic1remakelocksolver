@@ -218,11 +218,29 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .kc-row label { color:#8ecae6; min-width:80px; font-size:13px; }
 .kc-row .kc-btn { background:#0f3460; border:2px solid #1a4a7a; color:#ffd700; padding:4px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; min-width:60px; text-align:center; }
 .kc-status { color:#ffd700; font-size:12px; margin:8px 0; text-align:center; }
+.update-banner { display:none; position:fixed; top:0; left:0; right:0; background:linear-gradient(135deg,#1a4a7a,#0f3460); border-bottom:2px solid #00d4ff; padding:10px 20px; z-index:500; align-items:center; justify-content:center; gap:12px; font-size:13px; box-shadow:0 2px 16px rgba(0,0,0,0.5); }
+.update-banner.show { display:flex; }
+.update-banner .ub-text { color:#e0e0e0; }
+.update-banner .ub-ver { color:#00d4ff; font-weight:bold; }
+.update-banner .ub-btn { background:#00d4ff; color:#000; border:none; padding:5px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; }
+.update-banner .ub-btn:hover { background:#33dfff; }
+.update-banner .ub-later { background:transparent; color:#8ecae6; border:1px solid #8ecae6; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+.update-banner .ub-later:hover { color:#e0e0e0; border-color:#e0e0e0; }
+.update-banner .ub-close { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#666; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
+.update-banner .ub-close:hover { color:#e0e0e0; }
+.update-banner .ub-spinner { width:14px; height:14px; border:2px solid #0f3460; border-top-color:#00d4ff; border-radius:50%; animation:ub-spin 0.6s linear infinite; }
+@keyframes ub-spin { to { transform:rotate(360deg); } }
 </style>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
-<button class="lang-btn" id="langBtn" onclick="toggleLang()">RU</button>
+<div class="update-banner" id="updateBanner">
+  <span class="ub-text" id="t_update_text">UI update available:</span>
+  <span class="ub-ver" id="updateVersion"></span>
+  <button class="ub-btn" id="t_update_btn" onclick="applyUpdate()">Update</button>
+  <button class="ub-later" id="t_update_later" onclick="dismissUpdate()">Later</button>
+  <button class="ub-close" onclick="dismissUpdate()">&times;</button>
+</div><button class="lang-btn" id="langBtn" onclick="toggleLang()">RU</button>
 <div class="container">
   <h1 id="t_title">&#128274; Lock Pick Solver</h1>
 
@@ -345,6 +363,28 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
+const BRIDGE_VERSION = "2.1.0";
+const BRIDGE_UPDATE_URL = "https://raw.githubusercontent.com/iapon/gothic1remakelocksolver/gh-pages/bridge/bridge.html";
+const BRIDGE_CACHE_KEY = "bridge_update_cache";
+const BRIDGE_VER_KEY = "bridge_cached_version";
+
+(function tryApplyCachedUpdate() {
+  try {
+    const cachedVer = localStorage.getItem(BRIDGE_VER_KEY);
+    if (cachedVer && cachedVer !== BRIDGE_VERSION) {
+      const cached = localStorage.getItem(BRIDGE_CACHE_KEY);
+      if (cached && cached.indexOf('BRIDGE_VERSION') !== -1) {
+        document.open();
+        document.write(cached);
+        document.close();
+        throw 'update_applied';
+      }
+    }
+  } catch (e) {
+    if (e === 'update_applied') throw e;
+  }
+})();
+
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
   authDomain: "gothic-1-remake-lockpiker.firebaseapp.com",
@@ -555,6 +595,11 @@ const i18n = {
     assigned: 'assigned',
     seo_title: 'Gothic 1 Remake Chest Opener',
     seo_text: 'A free online tool for solving the lock picking minigame in <strong>Gothic 1 Remake</strong>. Configure the number of plates, pin positions, and directional effects between plates. The BFS algorithm finds the shortest sequence of moves to align all pins at the center position. Save your lock configurations as recipes, share them with the community, and import/export recipes as JSON files.',
+    update_text: 'UI update available:',
+    update_btn: 'Update',
+    update_later: 'Later',
+    update_applying: 'Applying update...',
+    update_done: 'UI updated!',
   },
   ru: {
     title: '\u{1F512} Вскрытие Замков',
@@ -644,6 +689,11 @@ const i18n = {
     assigned: 'назначена',
     seo_title: 'Взлом замков Gothic 1 Remake',
     seo_text: 'Бесплатный онлайн-инструмент для решения минигейма взлома замков в <strong>Gothic 1 Remake</strong>. Настройте количество пластин, позиции штырей и направления эффектов между пластинами. Алгоритм BFS находит кратчайшую последовательность ходов для выравнивания всех штырей по центру. Сохраняйте конфигурации замков как рецепты, делитесь ими с сообществом и импортируйте/экспортируйте рецепты в формате JSON.',
+    update_text: 'Доступно обновление UI:',
+    update_btn: 'Обновить',
+    update_later: 'Позже',
+    update_applying: 'Применяем обновление...',
+    update_done: 'UI обновлён!',
   }
 };
 
@@ -652,7 +702,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2','update_text','update_btn','update_later'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('unifiedSearch').placeholder = t('search_recipes');
@@ -1459,7 +1509,46 @@ document.addEventListener('keydown', function(e) {
   updateKeyLabels();
 });
 
-if (isBridge) { loadBridgeConfig(); }
+if (isBridge) { loadBridgeConfig(); setTimeout(checkForUpdate, 3000); }
+
+let pendingUpdateHtml = null;
+
+function verToNum(v) { return v.split('.').reduce(function(a, b) { return a * 100 + parseInt(b); }, 0); }
+
+function checkForUpdate() {
+  fetch(BRIDGE_UPDATE_URL + '?t=' + Date.now())
+    .then(function(r) { return r.text(); })
+    .then(function(html) {
+      var m = html.match(/BRIDGE_VERSION\s*=\s*"([^"]+)"/);
+      if (m && verToNum(m[1]) > verToNum(BRIDGE_VERSION)) {
+        pendingUpdateHtml = html;
+        document.getElementById('updateVersion').textContent = 'v' + m[1];
+        document.getElementById('updateBanner').classList.add('show');
+      }
+    })
+    .catch(function() {});
+}
+
+function applyUpdate() {
+  if (!pendingUpdateHtml) return;
+  var banner = document.getElementById('updateBanner');
+  banner.innerHTML = '<span class="ub-text">' + t('update_applying') + '</span><div class="ub-spinner"></div>';
+  try {
+    localStorage.setItem(BRIDGE_CACHE_KEY, pendingUpdateHtml);
+    var m = pendingUpdateHtml.match(/BRIDGE_VERSION\s*=\s*"([^"]+)"/);
+    if (m) localStorage.setItem(BRIDGE_VER_KEY, m[1]);
+  } catch(e) {}
+  setTimeout(function() {
+    document.open();
+    document.write(pendingUpdateHtml);
+    document.close();
+  }, 300);
+}
+
+function dismissUpdate() {
+  document.getElementById('updateBanner').classList.remove('show');
+  pendingUpdateHtml = null;
+}
 
 async function bridgeExecute() {
   if (!solution || solution.length === 0) {

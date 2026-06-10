@@ -278,6 +278,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
     <div style="display:flex;align-items:center;gap:12px;">
       <h2 style="margin:0;" id="t_plates">&#128260; Plates</h2>
       <span id="currentRecipeName" style="color:#ffd700;font-size:14px;font-weight:600;"></span>
+      <button class="btn btn-sm" id="copyUrlBtn" onclick="copyRecipeUrl()" style="display:none;border-color:#ffd700;color:#ffd700;">&#128279; <span id="t_copy_url">Copy URL</span></button>
       <button class="btn btn-sm" onclick="toggleGuide()" style="margin-left:auto;border-color:#ffd700;color:#ffd700;">? <span id="t_how_to">How to fill</span></button>
     </div>
     <div id="plateConfig" class="plate-list"></div>
@@ -363,7 +364,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.3.0";
+const BRIDGE_VERSION = "2.4.0";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -377,6 +378,7 @@ let db = null;
 try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.warn('Firebase not available', e); }
 
 let communityRecipes = [];
+let currentCommunityId = null;
 let shareScreenshot = null;
 let shareModalOpen = false;
 
@@ -546,6 +548,8 @@ const i18n = {
     cant_go: (n) => `Plate ${n} can't go further!`,
     would_go: (n) => `Plate ${n} would go out of bounds!`,
     address_copied: 'Address copied!',
+    copy_url: 'Copy URL',
+    url_copied: 'URL copied!',
     play_game: 'Play in Game',
     solve_first: 'Solve first!',
     already_executing: 'Already executing',
@@ -643,6 +647,8 @@ const i18n = {
     cant_go: (n) => `Пластина ${n} дальше не идёт!`,
     would_go: (n) => `Пластина ${n} выйдет за границы!`,
     address_copied: 'Адрес скопирован!',
+    copy_url: 'Копировать ссылку',
+    url_copied: 'Ссылка скопирована!',
     play_game: 'Играть в игре',
     solve_first: 'Сначала решите!',
     already_executing: 'Уже выполняется',
@@ -688,7 +694,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2','update_text','update_btn','update_later'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2','update_text','update_btn','update_later','copy_url'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('unifiedSearch').placeholder = t('search_recipes');
@@ -1287,7 +1293,9 @@ document.addEventListener('click', e => {
 });
 
 function loadLocalRecipe(name) {
-  const recipes = getRecipes();
+  currentCommunityId = null;
+  document.getElementById('copyUrlBtn').style.display = 'none';
+  var recipes = getRecipes();
   const r = recipes.find(x => x.name === name);
   if (!r) return;
   numPlates = r.numPlates;
@@ -1317,8 +1325,10 @@ function loadLocalRecipe(name) {
 }
 
 function loadCommunityRecipe(id) {
-  const r = communityRecipes.find(x => x.id === id);
+  var r = communityRecipes.find(x => x.id === id);
   if (!r) return;
+  currentCommunityId = id;
+  document.getElementById('copyUrlBtn').style.display = 'inline-block';
   numPlates = r.numPlates;
   numPositions = r.numPositions;
   center = r.center;
@@ -1332,7 +1342,7 @@ function loadCommunityRecipe(id) {
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
   showRecipeName(r.name);
-  const loaded = document.getElementById('loadedSs');
+  var loaded = document.getElementById('loadedSs');
   if (r.screenshot) {
     loaded.innerHTML = '<img src="' + r.screenshot + '" style="max-width:100%;border-radius:6px;cursor:pointer;" onclick="window.open(this.src)">';
     loaded.style.display = 'block';
@@ -1342,6 +1352,14 @@ function loadCommunityRecipe(id) {
   }
   hideSsPreview();
   closeUnifiedDropdown();
+}
+
+function copyRecipeUrl() {
+  if (!currentCommunityId) return;
+  var url = 'https://iapon.github.io/gothic1remakelocksolver/?recipe=' + currentCommunityId;
+  navigator.clipboard.writeText(url).then(function() {
+    showToast(t('url_copied'));
+  });
 }
 
 function showSsPreview(e) {
@@ -1384,7 +1402,10 @@ async function loadCommunity() {
 applyLang();
 loadPreset();
 filterUnified();
-loadCommunity();
+loadCommunity().then(function() {
+  var rid = new URLSearchParams(location.search).get('recipe');
+  if (rid) loadCommunityRecipe(rid);
+});
 
 // === Bridge-specific (native Go bindings) ===
 const isBridge = typeof window.execute === 'function';

@@ -363,27 +363,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.1.3";
-const BRIDGE_UPDATE_URL = "https://raw.githubusercontent.com/iapon/gothic1remakelocksolver/gh-pages/bridge/bridge.html";
-const BRIDGE_CACHE_KEY = "bridge_update_cache";
-const BRIDGE_VER_KEY = "bridge_cached_version";
-
-(function tryApplyCachedUpdate() {
-  try {
-    const cachedVer = localStorage.getItem(BRIDGE_VER_KEY);
-    if (cachedVer && cachedVer !== BRIDGE_VERSION) {
-      const cached = localStorage.getItem(BRIDGE_CACHE_KEY);
-      if (cached && cached.indexOf('BRIDGE_VERSION') !== -1) {
-        document.open();
-        document.write(cached);
-        document.close();
-        throw 'update_applied';
-      }
-    }
-  } catch (e) {
-    if (e === 'update_applied') throw e;
-  }
-})();
+const BRIDGE_VERSION = "2.2.0";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -1511,39 +1491,29 @@ document.addEventListener('keydown', function(e) {
 
 if (isBridge) { loadBridgeConfig(); setTimeout(checkForUpdate, 3000); }
 
-let pendingUpdateHtml = null;
-
-function verToNum(v) { return v.split('.').reduce(function(a, b) { return a * 100 + parseInt(b); }, 0); }
-
 function checkForUpdate() {
-  fetch(BRIDGE_UPDATE_URL + '?t=' + Date.now())
-    .then(function(r) { return r.text(); })
-    .then(function(html) {
-      var m = html.match(/BRIDGE_VERSION\s*=\s*"([^"]+)"/);
-      if (m && verToNum(m[1]) > verToNum(BRIDGE_VERSION)) {
-        pendingUpdateHtml = html;
-        document.getElementById('updateVersion').textContent = 'v' + m[1];
-        document.getElementById('updateBanner').classList.add('show');
-      }
-    })
-    .catch(function() {});
+  if (!window.checkUpdate) return;
+  window.checkUpdate().then(function(res) {
+    if (res.ok && res.update) {
+      pendingUpdateUrl = res.exeUrl;
+      document.getElementById('updateVersion').textContent = 'v' + res.version;
+      document.getElementById('updateBanner').classList.add('show');
+    }
+  }).catch(function() {});
 }
 
+var pendingUpdateUrl = null;
+
 function applyUpdate() {
-  if (!pendingUpdateHtml) return;
+  if (!pendingUpdateUrl || !window.applyUpdate) return;
   var banner = document.getElementById('updateBanner');
   banner.innerHTML = '<span class="ub-text">' + t('update_applying') + '</span><div class="ub-spinner"></div>';
-  try {
-    localStorage.setItem(BRIDGE_CACHE_KEY, pendingUpdateHtml);
-    var m = pendingUpdateHtml.match(/BRIDGE_VERSION\s*=\s*"([^"]+)"/);
-    if (m) localStorage.setItem(BRIDGE_VER_KEY, m[1]);
-  } catch(e) {}
-  setTimeout(function() { location.reload(); }, 500);
+  window.applyUpdate(pendingUpdateUrl);
 }
 
 function dismissUpdate() {
   document.getElementById('updateBanner').classList.remove('show');
-  pendingUpdateHtml = null;
+  pendingUpdateUrl = null;
 }
 
 async function bridgeExecute() {

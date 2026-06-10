@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -647,6 +648,108 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
+const AppVersion = "2.2.0"
+
+type githubRelease struct {
+	TagName string `json:"tag_name"`
+	Assets  []struct {
+		Name string `json:"name"`
+		URL  string `json:"browser_download_url"`
+	} `json:"assets"`
+}
+
+func jsCheckUpdate() map[string]interface{} {
+	resp, err := http.Get("https://api.github.com/repos/iapon/gothic1remakelocksolver/releases/latest")
+	if err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var rel githubRelease
+	if err := json.Unmarshal(body, &rel); err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	remoteVer := strings.TrimPrefix(rel.TagName, "v")
+	if verToNum(remoteVer) <= verToNum(AppVersion) {
+		return map[string]interface{}{"ok": true, "update": false}
+	}
+	var exeURL string
+	for _, a := range rel.Assets {
+		if strings.HasSuffix(a.Name, ".exe") {
+			exeURL = a.URL
+			break
+		}
+	}
+	if exeURL == "" {
+		return map[string]interface{}{"ok": false, "error": "no exe in release"}
+	}
+	return map[string]interface{}{
+		"ok":       true,
+		"update":   true,
+		"version":  remoteVer,
+		"exeUrl":   exeURL,
+		"exeName":  rel.Assets[0].Name,
+	}
+}
+
+func verToNum(v string) int {
+	parts := strings.Split(v, ".")
+	n := 0
+	for _, p := range parts {
+		var x int
+		fmt.Sscanf(p, "%d", &x)
+		n = n*100 + x
+	}
+	return n
+}
+
+func jsApplyUpdate(exeURL string) map[string]interface{} {
+	exePath, err := os.Executable()
+	if err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	exeDir := filepath.Dir(exePath)
+	tmpPath := filepath.Join(exeDir, "lock-picker-bridge-update.exe")
+
+	resp, err := http.Get(exeURL)
+	if err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return map[string]interface{}{"ok": false, "error": "download failed: " + resp.Status}
+	}
+
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		f.Close()
+		os.Remove(tmpPath)
+		return map[string]interface{}{"ok": false, "error": err.Error()}
+	}
+	f.Close()
+
+	oldPath := exePath + ".old"
+	os.Remove(oldPath)
+	if err := os.Rename(exePath, oldPath); err != nil {
+		os.Remove(tmpPath)
+		return map[string]interface{}{"ok": false, "error": "rename old: " + err.Error()}
+	}
+	if err := os.Rename(tmpPath, exePath); err != nil {
+		os.Rename(oldPath, exePath)
+		os.Remove(tmpPath)
+		return map[string]interface{}{"ok": false, "error": "rename new: " + err.Error()}
+	}
+	os.Remove(oldPath)
+
+	cmd := exec.Command(exePath)
+	cmd.Start()
+	os.Exit(0)
+	return map[string]interface{}{"ok": true}
+}
+
 //go:embed bridge.html
 var htmlContent string
 
@@ -695,6 +798,8 @@ func main() {
 	wv.Bind("getExecStatus", jsGetExecStatus)
 	wv.Bind("getConfig", jsGetConfig)
 	wv.Bind("setConfig", jsSetConfig)
+	wv.Bind("checkUpdate", jsCheckUpdate)
+	wv.Bind("applyUpdate", jsApplyUpdate)
 
 	wv.Navigate("http://localhost:8765/")
 	wv.Run()

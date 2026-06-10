@@ -109,6 +109,16 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .donate-popup .addr-copy:hover { background: #0f3460; }
 .donate-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
 .donate-overlay.open { display: block; }
+.share-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:250; }
+.share-overlay.open { display:block; }
+.share-popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#0f0f23; border:1px solid #1a4a7a; border-radius:12px; padding:24px; z-index:251; max-width:420px; width:90%; }
+.share-popup.open { display:block; }
+.share-popup h3 { color:#ffd700; margin-bottom:16px; text-align:center; }
+.share-drop { border:2px dashed #333; border-radius:8px; padding:20px; text-align:center; color:#555; font-size:13px; cursor:pointer; transition:border-color 0.2s,color 0.2s; margin-bottom:12px; }
+.share-drop:hover { border-color:#ffd700; color:#ffd700; }
+.share-drop.has-img { border-style:solid; border-color:#0f0; padding:8px; }
+.share-drop img { max-width:100%; max-height:200px; border-radius:6px; display:block; margin:0 auto; }
+.share-actions { display:flex; gap:8px; justify-content:center; margin-top:16px; }
 .donate-close { text-align: center; margin-top: 12px; }
 
 .preset-box { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -220,8 +230,6 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
       <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
       <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
-      <label class="btn btn-sm" style="cursor:pointer;border-color:#ffd700;color:#ffd700;">&#128247; <span id="t_attach">Attach</span><input type="file" accept="image/*" style="display:none" onchange="handleScreenshotFile(event)"></label>
-      <span id="ssBadge" style="display:none;color:#ffd700;font-size:12px;">&#10003;</span>
       <div class="search-wrap">
         <span class="search-icon">&#128269;</span>
         <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
@@ -279,6 +287,20 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 
   <div class="seo-text" id="seoText"></div>
 </div>
+<div class="share-overlay" id="shareOverlay" onclick="closeShareModal()"></div>
+<div class="share-popup" id="sharePopup">
+  <h3 id="t_share_title">&#127760; Share to Community</h3>
+  <div class="share-drop" id="shareDrop" onclick="document.getElementById('shareFileInput').click()">
+    <span id="t_share_drop">&#128247; Paste (Ctrl+V) or click to attach screenshot</span>
+    <img id="shareDropImg" style="display:none">
+    <input type="file" id="shareFileInput" accept="image/*" style="display:none" onchange="handleShareFile(event)">
+  </div>
+  <div class="share-actions">
+    <button class="btn" onclick="doShare(true)" style="border-color:#0f0;color:#0f0;" id="t_share_with">&#128247; Share with screenshot</button>
+    <button class="btn" onclick="doShare(false)" id="t_share_without">&#127760; Share without</button>
+    <button class="btn" onclick="closeShareModal()" id="t_cancel">Cancel</button>
+  </div>
+</div>
 <div class="donate-overlay" id="donateOverlay" onclick="toggleDonate()"></div>
 <div class="donate-popup" id="donatePopup">
   <h3>&#9749; Support the project</h3>
@@ -322,7 +344,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let communityRecipes = [];
-let screenshotBase64 = null;
+let shareScreenshot = null;
+let shareModalOpen = false;
 
 function compressScreenshot(file) {
   return new Promise((resolve) => {
@@ -341,45 +364,81 @@ function compressScreenshot(file) {
   });
 }
 
-function updateScreenshotPreview() {
-  const badge = document.getElementById('ssBadge');
-  if (screenshotBase64) {
-    badge.style.display = 'inline';
-    badge.title = 'Screenshot attached';
+function showShareImg(b64) {
+  const drop = document.getElementById('shareDrop');
+  const txt = document.getElementById('t_share_drop');
+  const img = document.getElementById('shareDropImg');
+  if (b64) {
+    img.src = b64;
+    img.style.display = 'block';
+    txt.style.display = 'none';
+    drop.classList.add('has-img');
   } else {
-    badge.style.display = 'none';
+    img.src = '';
+    img.style.display = 'none';
+    txt.style.display = '';
+    drop.classList.remove('has-img');
   }
 }
 
-function clearScreenshot() {
-  screenshotBase64 = null;
-  updateScreenshotPreview();
-}
-
-function handleScreenshotFile(e) {
+function handleShareFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  compressScreenshot(file).then(b64 => {
-    screenshotBase64 = b64;
-    updateScreenshotPreview();
-  });
+  compressScreenshot(file).then(b64 => { shareScreenshot = b64; showShareImg(b64); });
 }
 
-function handleScreenshotPaste(e) {
+function handleSharePaste(e) {
+  if (!shareModalOpen) return;
   const items = (e.clipboardData || e.originalEvent.clipboardData).items;
   for (const item of items) {
     if (item.type.startsWith('image/')) {
       e.preventDefault();
-      compressScreenshot(item.getAsFile()).then(b64 => {
-        screenshotBase64 = b64;
-        updateScreenshotPreview();
-      });
+      compressScreenshot(item.getAsFile()).then(b64 => { shareScreenshot = b64; showShareImg(b64); });
       return;
     }
   }
 }
 
-document.addEventListener('paste', handleScreenshotPaste);
+document.addEventListener('paste', handleSharePaste);
+
+function submitToCommunity() {
+  const name = document.getElementById('recipeName').value.trim();
+  if (!name) { showToast(t('enter_first')); return; }
+  const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
+  if (existing) { showToast(t('exists')(name)); return; }
+  shareScreenshot = null;
+  showShareImg(null);
+  shareModalOpen = true;
+  document.getElementById('shareOverlay').classList.add('open');
+  document.getElementById('sharePopup').classList.add('open');
+}
+
+function closeShareModal() {
+  shareModalOpen = false;
+  document.getElementById('shareOverlay').classList.remove('open');
+  document.getElementById('sharePopup').classList.remove('open');
+}
+
+async function doShare(withScreenshot) {
+  const name = document.getElementById('recipeName').value.trim();
+  const data = {
+    name,
+    numPlates, numPositions, center,
+    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
+    steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
+    screenshot: withScreenshot ? shareScreenshot : null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try {
+    await db.collection('recipes').add(data);
+    showToast(t('shared')(name));
+    closeShareModal();
+    loadCommunity();
+  } catch(e) {
+    showToast(t('share_err'));
+    console.error(e);
+  }
+}
 
 let lang = localStorage.getItem('lockLang') || 'en';
 
@@ -393,7 +452,11 @@ const i18n = {
     recipe_ph: 'Recipe name...',
     save: 'Save',
     share: 'Share',
-    attach: 'Attach',
+    share_title: '&#127760; Share to Community',
+    share_drop: '&#128247; Paste (Ctrl+V) or click to attach screenshot',
+    share_with: '&#128247; Share with screenshot',
+    share_without: '&#127760; Share without',
+    cancel: 'Cancel',
     search_local: 'Search local...',
     download: '\u2B07 Download',
     upload: '\u2B06 Upload',
@@ -459,7 +522,11 @@ const i18n = {
     recipe_ph: 'Имя рецепта...',
     save: 'Сохранить',
     share: 'Поделиться',
-    attach: 'Вложить',
+    share_title: '&#127760; Поделиться с сообществом',
+    share_drop: '&#128247; Вставьте (Ctrl+V) или нажмите для скриншота',
+    share_with: '&#128247; Поделиться со скриншотом',
+    share_without: '&#127760; Поделиться без скриншота',
+    cancel: 'Отмена',
     search_local: 'Поиск локальных...',
     download: '\u2B07 Скачать',
     upload: '\u2B06 Загрузить',
@@ -523,7 +590,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','attach','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','how_to','guide_close'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','share_title','share_drop','share_with','share_without','cancel','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','how_to','guide_close'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -1195,34 +1262,6 @@ async function loadCommunity() {
     filterCommunity();
   } catch(e) {
     console.error('Community load error', e);
-  }
-}
-
-async function submitToCommunity() {
-  const name = document.getElementById('recipeName').value.trim();
-  if (!name) { showToast(t('enter_first')); return; }
-
-  const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
-  if (existing) { showToast(t('exists')(name)); return; }
-
-  const data = {
-    name,
-    numPlates, numPositions, center,
-    plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
-    steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
-    screenshot: screenshotBase64 || null,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  try {
-    await db.collection('recipes').add(data);
-    showToast(t('shared')(name));
-    screenshotBase64 = null;
-    updateScreenshotPreview();
-    loadCommunity();
-  } catch(e) {
-    showToast(t('share_err'));
-    console.error(e);
   }
 }
 

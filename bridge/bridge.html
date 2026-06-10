@@ -651,9 +651,8 @@ function applyLang() {
   const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
-  document.getElementById('recipeSearch').placeholder = t('search_local');
-  document.getElementById('communitySearch').placeholder = t('search_community');
-  if (plates.length) { renderConfig(); renderRecipeList(); filterCommunity(); }
+  document.getElementById('unifiedSearch').placeholder = t('search_recipes');
+  if (plates.length) { renderConfig(); filterUnified(); }
   const seo = document.getElementById('seoText');
   if (seo) seo.innerHTML = `<h2>${t('seo_title')}</h2><p>${t('seo_text')}</p>`;
 }

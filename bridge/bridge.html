@@ -234,35 +234,34 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       </select>
       <button class="btn btn-sm btn-danger" onclick="resetAll()" id="t_reset_all">Reset All</button>
     </div>
-    <div class="recipe-box">
-      <label id="t_recipe">Recipe:</label>
-      <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
-      <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
-      <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
-      <div class="search-wrap">
-        <span class="search-icon">&#128269;</span>
-        <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
-        <div class="search-dropdown" id="recipeDropdown"></div>
-      </div>
-      <button class="btn btn-sm" onclick="exportRecipe()" id="t_download">&#11015; Download</button>
-      <label class="btn btn-sm" style="cursor:pointer;" id="t_upload">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
-      <span style="color:#444;">|</span>
-      <button class="btn btn-sm" onclick="exportAllRecipes()" id="t_download_all">&#11015; All</button>
-      <label class="btn btn-sm" style="cursor:pointer;" id="t_upload_all">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
-    </div>
-    <div class="recipe-box" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;">
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <div style="flex:1;min-width:0;">
-          <label style="color:#0f0;">&#127760; <span id="t_community">Community</span>:</label>
-          <div class="search-wrap">
-            <span class="search-icon">&#128269;</span>
-            <input type="text" class="search-input" id="communitySearch" placeholder="Search community..." oninput="filterCommunity()" onfocus="openCommunityDropdown()" onclick="event.stopPropagation()">
-            <div class="search-dropdown" id="communityDropdown"></div>
-          </div>
-          <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
+    <div class="recipe-box" style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;align-items:center;">
+        <label id="t_recipe">Recipe:</label>
+        <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
+        <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
+        <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
+        <div class="search-wrap">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
+          <div class="search-dropdown" id="recipeDropdown"></div>
         </div>
-        <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" onclick="exportRecipe()" id="t_download">&#11015; Download</button>
+          <label class="btn btn-sm" style="cursor:pointer;" id="t_upload">&#11014; Upload<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importRecipe(event)"></label>
+        </div>
+        <label style="color:#0f0;">&#127760; <span id="t_community">Community</span>:</label>
+        <div class="search-wrap">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" class="search-input" id="communitySearch" placeholder="Search community..." oninput="filterCommunity()" onfocus="openCommunityDropdown()" onclick="event.stopPropagation()">
+          <div class="search-dropdown" id="communityDropdown"></div>
+        </div>
+        <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm" onclick="exportAllRecipes()" id="t_download_all">&#11015; All</button>
+          <label class="btn btn-sm" style="cursor:pointer;" id="t_upload_all">&#11014; All<input type="file" id="fileInputAll" accept=".json" style="display:none" onchange="importAllRecipes(event)"></label>
+        </div>
       </div>
+      <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
     </div>
   </div>
 

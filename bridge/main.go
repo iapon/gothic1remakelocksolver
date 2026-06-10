@@ -489,6 +489,7 @@ func startServer() {
 	mux.HandleFunc("/api/execute", withCORS(handleExecute))
 	mux.HandleFunc("/api/stop", withCORS(handleStop))
 	mux.HandleFunc("/api/status", withCORS(handleStatus))
+	mux.HandleFunc("/api/update", withCORS(handleUpdate))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(htmlContent))
@@ -574,6 +575,100 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
+func handleUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "GET only", 405)
+		return
+	}
+	exeURL := r.URL.Query().Get("url")
+	if exeURL == "" {
+		http.Error(w, "missing url param", 400)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "no flusher", 500)
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	sendEvent := func(event, data string) {
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, data)
+		flusher.Flush()
+	}
+
+	sendEvent("status", "downloading")
+
+	exePath, err := os.Executable()
+	if err != nil {
+		sendEvent("error", err.Error())
+		return
+	}
+	exeDir := filepath.Dir(exePath)
+	tmpPath := filepath.Join(exeDir, "lock-picker-bridge-update.exe")
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	resp, err := client.Get(exeURL)
+	if err != nil {
+		sendEvent("error", "download: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		sendEvent("error", "download status: "+resp.Status)
+		return
+	}
+
+	total := resp.ContentLength
+	var downloaded int64
+	buf := make([]byte, 32*1024)
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		sendEvent("error", "create: "+err.Error())
+		return
+	}
+	var lastPct int
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			f.Write(buf[:n])
+			downloaded += int64(n)
+			if total > 0 {
+				pct := int(downloaded * 100 / total)
+				if pct != lastPct {
+					lastPct = pct
+					sendEvent("progress", fmt.Sprintf("%d", pct))
+				}
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	f.Close()
+
+	sendEvent("status", "installing")
+
+	batPath := filepath.Join(exeDir, "update.bat")
+	bat := fmt.Sprintf("@echo off\r\nping -n 3 127.0.0.1 >nul\r\ncopy /y \"%s\" \"%s\"\r\ndel \"%s\"\r\nstart \"\" \"%s\"\r\ndel \"%s\"\r\n",
+		tmpPath, exePath, tmpPath, exePath, batPath)
+	os.WriteFile(batPath, []byte(bat), 0644)
+
+	cmd := exec.Command("cmd", "/c", batPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.Start()
+
+	sendEvent("status", "restarting")
+
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		os.Exit(0)
+	}()
+}
+
 // --- JS-callable functions (bound via webview.Bind) ---
 
 func jsGetConfig() KeyConfig {
@@ -648,7 +743,7 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
-const AppVersion = "2.2.1"
+const AppVersion = "2.3.0"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
@@ -704,50 +799,6 @@ func verToNum(v string) int {
 }
 
 func jsApplyUpdate(exeURL string) map[string]interface{} {
-	exePath, err := os.Executable()
-	if err != nil {
-		return map[string]interface{}{"ok": false, "error": err.Error()}
-	}
-	exeDir := filepath.Dir(exePath)
-	tmpPath := filepath.Join(exeDir, "lock-picker-bridge-update.exe")
-
-	resp, err := http.Get(exeURL)
-	if err != nil {
-		return map[string]interface{}{"ok": false, "error": "download: " + err.Error()}
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return map[string]interface{}{"ok": false, "error": "download status: " + resp.Status}
-	}
-
-	f, err := os.Create(tmpPath)
-	if err != nil {
-		return map[string]interface{}{"ok": false, "error": "create temp: " + err.Error()}
-	}
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		f.Close()
-		os.Remove(tmpPath)
-		return map[string]interface{}{"ok": false, "error": "write: " + err.Error()}
-	}
-	f.Close()
-
-	batPath := filepath.Join(exeDir, "update.bat")
-	bat := fmt.Sprintf("@echo off\r\nping -n 3 127.0.0.1 >nul\r\ncopy /y \"%s\" \"%s\"\r\ndel \"%s\"\r\nstart \"\" \"%s\"\r\ndel \"%s\"\r\n",
-		tmpPath, exePath, tmpPath, exePath, batPath)
-	if err := os.WriteFile(batPath, []byte(bat), 0644); err != nil {
-		os.Remove(tmpPath)
-		return map[string]interface{}{"ok": false, "error": "write bat: " + err.Error()}
-	}
-
-	cmd := exec.Command("cmd", "/c", batPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	if err := cmd.Start(); err != nil {
-		os.Remove(tmpPath)
-		os.Remove(batPath)
-		return map[string]interface{}{"ok": false, "error": "start bat: " + err.Error()}
-	}
-
-	os.Exit(0)
 	return map[string]interface{}{"ok": true}
 }
 

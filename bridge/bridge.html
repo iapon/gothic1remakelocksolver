@@ -363,7 +363,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.2.1";
+const BRIDGE_VERSION = "2.3.0";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -580,6 +580,9 @@ const i18n = {
     update_later: 'Later',
     update_applying: 'Applying update...',
     update_done: 'UI updated!',
+    update_downloading: 'Downloading',
+    update_installing: 'Installing...',
+    update_restarting: 'Restarting...',
   },
   ru: {
     title: '\u{1F512} Вскрытие Замков',
@@ -674,6 +677,9 @@ const i18n = {
     update_later: 'Позже',
     update_applying: 'Применяем обновление...',
     update_done: 'UI обновлён!',
+    update_downloading: 'Загрузка',
+    update_installing: 'Установка...',
+    update_restarting: 'Перезапуск...',
   }
 };
 
@@ -1505,10 +1511,30 @@ function checkForUpdate() {
 var pendingUpdateUrl = null;
 
 function applyUpdate() {
-  if (!pendingUpdateUrl || !window.applyUpdate) return;
+  if (!pendingUpdateUrl) return;
   var banner = document.getElementById('updateBanner');
-  banner.innerHTML = '<span class="ub-text">' + t('update_applying') + '</span><div class="ub-spinner"></div>';
-  window.applyUpdate(pendingUpdateUrl);
+  banner.innerHTML = '<span class="ub-text">' + t('update_applying') + '</span><div class="ub-spinner"></div><span class="ub-text" id="updateStatus"></span>';
+  var statusEl = document.getElementById('updateStatus');
+  var restarting = false;
+  var es = new EventSource('/api/update?url=' + encodeURIComponent(pendingUpdateUrl));
+  es.addEventListener('status', function(e) {
+    statusEl.textContent = t('update_' + e.data) || e.data;
+    if (e.data === 'restarting') restarting = true;
+  });
+  es.addEventListener('progress', function(e) {
+    statusEl.textContent = t('update_downloading') + ' ' + e.data + '%';
+  });
+  es.addEventListener('error', function() {
+    es.close();
+    if (!restarting) {
+      banner.innerHTML = '<span class="ub-text" style="color:#ff6b6b;">Error: connection lost</span><button class="ub-later" onclick="dismissUpdate()" style="margin-left:12px;">OK</button>';
+    }
+  });
+}
+
+window.updateError = function(msg) {
+  var banner = document.getElementById('updateBanner');
+  banner.innerHTML = '<span class="ub-text" style="color:#ff6b6b;">Error: ' + msg + '</span><button class="ub-later" onclick="dismissUpdate()" style="margin-left:12px;">OK</button>';
 }
 
 function dismissUpdate() {

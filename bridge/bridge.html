@@ -173,6 +173,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .search-item:last-child { border-bottom: none; }
 .search-item .si-name { color: #e0e0e0; }
 .search-item .si-info { color: #555; font-size: 11px; }
+.search-item .si-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; margin-right: 8px; cursor: pointer; flex-shrink: 0; }
 .search-item .si-del { color: #e74c3c; font-size: 14px; padding: 0 4px; margin-left: 8px; }
 .search-item .si-del:hover { color: #ff6b6b; }
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
@@ -225,6 +226,8 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')saveRecipe()">
       <button class="btn btn-sm" onclick="saveRecipe()" id="t_save">Save</button>
       <button class="btn btn-sm" onclick="submitToCommunity()" style="border-color:#0f0;color:#0f0;">&#127760; <span id="t_share">Share</span></button>
+      <label class="btn btn-sm" style="cursor:pointer;border-color:#ffd700;color:#ffd700;">&#128247; <span id="t_attach">Attach</span><input type="file" accept="image/*" style="display:none" onchange="handleScreenshotFile(event)"></label>
+      <span id="ssBadge" style="display:none;color:#ffd700;font-size:12px;">&#10003;</span>
       <div class="search-wrap">
         <span class="search-icon">&#128269;</span>
         <input type="text" class="search-input" id="recipeSearch" placeholder="Search local..." oninput="filterRecipes()" onfocus="openDropdown()" onclick="event.stopPropagation()">
@@ -334,6 +337,65 @@ let db = null;
 try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) { console.warn('Firebase not available', e); }
 
 let communityRecipes = [];
+let screenshotBase64 = null;
+
+function compressScreenshot(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 400;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.4));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function updateScreenshotPreview() {
+  const badge = document.getElementById('ssBadge');
+  if (screenshotBase64) {
+    badge.style.display = 'inline';
+    badge.title = 'Screenshot attached';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function clearScreenshot() {
+  screenshotBase64 = null;
+  updateScreenshotPreview();
+}
+
+function handleScreenshotFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressScreenshot(file).then(b64 => {
+    screenshotBase64 = b64;
+    updateScreenshotPreview();
+  });
+}
+
+function handleScreenshotPaste(e) {
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      compressScreenshot(item.getAsFile()).then(b64 => {
+        screenshotBase64 = b64;
+        updateScreenshotPreview();
+      });
+      return;
+    }
+  }
+}
+
+document.addEventListener('paste', handleScreenshotPaste);
+
 
 let lang = localStorage.getItem('lockLang') || 'en';
 
@@ -347,6 +409,7 @@ const i18n = {
     recipe_ph: 'Recipe name...',
     save: 'Save',
     share: 'Share',
+    attach: 'Attach',
     search_local: 'Search local...',
     download: '\u2B07 Download',
     upload: '\u2B06 Upload',
@@ -437,6 +500,7 @@ const i18n = {
     recipe_ph: 'Имя рецепта...',
     save: 'Сохранить',
     share: 'Поделиться',
+    attach: 'Вложить',
     search_local: 'Поиск локальных...',
     download: '\u2B07 Скачать',
     upload: '\u2B06 Загрузить',
@@ -525,7 +589,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','share','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','how_to','guide_close','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','share','attach','community','refresh','plates','solve','find','reset','autoplay','speed','coffee','download','upload','download_all','upload_all','play_game','copy_steps','bridge_title','target_window','delay','refresh2','execute_game','stop','how_to','guide_close','keys','key_next','key_prev','key_left','key_right','change_keys','key_bindings','key_next2','key_prev2','key_left2','key_right2'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('recipeSearch').placeholder = t('search_local');
@@ -1262,12 +1326,15 @@ async function submitToCommunity() {
     numPlates, numPositions, center,
     plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
     steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
+    screenshot: screenshotBase64 || null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   try {
     await db.collection('recipes').add(data);
     showToast(t('shared')(name));
+    screenshotBase64 = null;
+    updateScreenshotPreview();
     loadCommunity();
   } catch(e) {
     showToast(t('share_err'));
@@ -1338,7 +1405,8 @@ function filterCommunity() {
       const info = `${r.numPlates}P / ${r.numPositions}pos`;
       const safe = (r.name || '').replace(/'/g, "\\'");
       const rid = r.id;
-      item.innerHTML = `<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span>`;
+      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb" onclick="event.stopPropagation();loadCommunityRecipe(\'' + rid + '\')">' : '';
+      item.innerHTML = `${thumb}<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info">${info}</span>`;
       dropdown.appendChild(item);
     }
   }

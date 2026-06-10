@@ -173,7 +173,8 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .mini-plate-label { font-size: 9px; color: #888; margin-right: 2px; align-self: center; }
 
 .search-wrap { position: relative; display: inline-block; }
-.search-input { background: #0f3460; border: 1px solid #1a4a7a; color: #e0e0e0; padding: 6px 10px 6px 28px; border-radius: 6px; font-size: 13px; width: 220px; }
+.recipe-box input[type="text"].search-input { padding-left: 24px; }
+.search-input { background: #0f3460; border: 1px solid #1a4a7a; color: #e0e0e0; padding: 6px 10px 6px 24px; border-radius: 6px; font-size: 13px; width: 220px; }
 .search-input:focus { outline: none; border-color: #00d4ff; }
 .search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #8ecae6; font-size: 12px; pointer-events: none; }
 .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #0f3460; border: 1px solid #1a4a7a; border-radius: 0 0 8px 8px; max-height: 260px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
@@ -229,17 +230,20 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
       <button class="btn btn-sm btn-danger" onclick="resetAll()" id="t_reset_all">Reset All</button>
     </div>
     <div class="recipe-box" style="display:flex;gap:12px;align-items:flex-start;">
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <label id="t_recipe">Recipe:</label>
-          <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')openSaveModal()" style="flex:1;min-width:140px;">
-          <button class="btn btn-sm" onclick="openSaveModal()" id="t_save">&#128190; Save</button>
-          <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; Refresh</button>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label id="t_recipe" style="white-space:nowrap;">Recipe:</label>
+          <input type="text" id="recipeName" placeholder="Recipe name..." onkeydown="if(event.key==='Enter')openSaveModal()" style="flex:1;max-width:280px;">
+          <button class="btn btn-sm" onclick="openSaveModal()" id="t_save">&#128190; <span id="t_save_label">Save</span></button>
         </div>
-        <div class="search-wrap" style="margin-top:6px;">
-          <span class="search-icon">&#128269;</span>
-          <input type="text" class="search-input" id="unifiedSearch" placeholder="Search recipes..." oninput="filterUnified()" onfocus="openUnifiedDropdown()" onclick="event.stopPropagation()">
-          <div class="search-dropdown" id="unifiedDropdown"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="color:#8ecae6;white-space:nowrap;" id="t_search_label">&#128269; Search:</label>
+          <div class="search-wrap" style="flex:1;max-width:320px;">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" class="search-input" id="unifiedSearch" placeholder="Search recipes..." oninput="filterUnified()" onfocus="openUnifiedDropdown()" onclick="event.stopPropagation()">
+            <div class="search-dropdown" id="unifiedDropdown"></div>
+          </div>
+          <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh">&#8635; <span id="t_refresh_label">Refresh</span></button>
         </div>
       </div>
       <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
@@ -454,6 +458,8 @@ const i18n = {
     reset_all: 'Reset All',
     recipe: 'Recipe:',
     recipe_ph: 'Recipe name...',
+    save_label: 'Save',
+    search_label: '\u{1F50D} Search:',
     save: '\u{1F4BE} Save',
     save_title: '\u{1F4BE} Save Recipe',
     save_drop: '\u{1F4F7} Paste (Ctrl+V) or click to attach screenshot',
@@ -518,6 +524,8 @@ const i18n = {
     reset_all: 'Сбросить всё',
     recipe: 'Рецепт:',
     recipe_ph: 'Имя рецепта...',
+    save_label: 'Сохранить',
+    search_label: '\u{1F50D} Поиск:',
     save: '\u{1F4BE} Сохранить',
     save_title: '\u{1F4BE} Сохранить рецепт',
     save_drop: '\u{1F4F7} Вставьте (Ctrl+V) или нажмите для скриншота',
@@ -582,7 +590,7 @@ function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  const ids = ['title','config','plates_label','reset_all','recipe','save','save_title','save_drop','save_local','save_community','cancel','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close'];
+  const ids = ['title','config','plates_label','reset_all','recipe','save','save_label','save_title','save_drop','save_local','save_community','cancel','search_label','refresh','plates','solve','find','reset','autoplay','speed','coffee','how_to','guide_close'];
   ids.forEach(k => { const el = document.getElementById('t_' + k); if (el) el.innerHTML = t(k); });
   document.getElementById('recipeName').placeholder = t('recipe_ph');
   document.getElementById('unifiedSearch').placeholder = t('search_recipes');

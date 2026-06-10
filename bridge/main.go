@@ -648,7 +648,7 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
-const AppVersion = "2.2.0"
+const AppVersion = "2.2.1"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
@@ -713,39 +713,40 @@ func jsApplyUpdate(exeURL string) map[string]interface{} {
 
 	resp, err := http.Get(exeURL)
 	if err != nil {
-		return map[string]interface{}{"ok": false, "error": err.Error()}
+		return map[string]interface{}{"ok": false, "error": "download: " + err.Error()}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return map[string]interface{}{"ok": false, "error": "download failed: " + resp.Status}
+		return map[string]interface{}{"ok": false, "error": "download status: " + resp.Status}
 	}
 
 	f, err := os.Create(tmpPath)
 	if err != nil {
-		return map[string]interface{}{"ok": false, "error": err.Error()}
+		return map[string]interface{}{"ok": false, "error": "create temp: " + err.Error()}
 	}
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		f.Close()
 		os.Remove(tmpPath)
-		return map[string]interface{}{"ok": false, "error": err.Error()}
+		return map[string]interface{}{"ok": false, "error": "write: " + err.Error()}
 	}
 	f.Close()
 
-	oldPath := exePath + ".old"
-	os.Remove(oldPath)
-	if err := os.Rename(exePath, oldPath); err != nil {
+	batPath := filepath.Join(exeDir, "update.bat")
+	bat := fmt.Sprintf("@echo off\r\nping -n 3 127.0.0.1 >nul\r\ncopy /y \"%s\" \"%s\"\r\ndel \"%s\"\r\nstart \"\" \"%s\"\r\ndel \"%s\"\r\n",
+		tmpPath, exePath, tmpPath, exePath, batPath)
+	if err := os.WriteFile(batPath, []byte(bat), 0644); err != nil {
 		os.Remove(tmpPath)
-		return map[string]interface{}{"ok": false, "error": "rename old: " + err.Error()}
+		return map[string]interface{}{"ok": false, "error": "write bat: " + err.Error()}
 	}
-	if err := os.Rename(tmpPath, exePath); err != nil {
-		os.Rename(oldPath, exePath)
-		os.Remove(tmpPath)
-		return map[string]interface{}{"ok": false, "error": "rename new: " + err.Error()}
-	}
-	os.Remove(oldPath)
 
-	cmd := exec.Command(exePath)
-	cmd.Start()
+	cmd := exec.Command("cmd", "/c", batPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	if err := cmd.Start(); err != nil {
+		os.Remove(tmpPath)
+		os.Remove(batPath)
+		return map[string]interface{}{"ok": false, "error": "start bat: " + err.Error()}
+	}
+
 	os.Exit(0)
 	return map[string]interface{}{"ok": true}
 }

@@ -1237,8 +1237,25 @@ function hideSsPreview() {
 
 function resetAll() {
   if (!confirm(t('reset_confirm'))) return;
-  loadPreset();
+  history.replaceState(null, '', location.pathname);
+  currentCommunityId = null;
+  document.getElementById('copyUrlBtn').style.display = 'none';
+  document.getElementById('recipeName').value = '';
   showRecipeName('');
+  var loaded = document.getElementById('loadedSs');
+  loaded.innerHTML = '';
+  loaded.style.display = 'none';
+  plates = [];
+  for (var i = 0; i < numPlates; i++) {
+    plates.push({initPin: center, effects: []});
+  }
+  currentPins = plates.map(function(p) { return p.initPin; });
+  renderConfig();
+  renderVisual();
+  solution = null;
+  solutionStates = [];
+  document.getElementById('solutionBox').style.display = 'none';
+  setStatus('idle', t('ready'));
   filterUnified();
 }
 

@@ -1155,7 +1155,7 @@ function filterUnified() {
       const rid = r.id;
       const firstShot = getRecipeShots(r)[0];
       const thumb = firstShot ? '<img src="' + firstShot + '" class="si-thumb">' : '';
-      item.innerHTML = `${thumb}<span class="si-name" onclick="loadLocalRecipe('${safe}')">${r.name}</span>...`;
+      item.innerHTML = `${thumb}<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info" style="color:#0f0;">&#127760; ${info}</span>`;
       if (firstShot) {
         item.dataset.ss = firstShot;
         item.addEventListener('mouseenter', showSsPreview);
@@ -1278,9 +1278,7 @@ var loadedShots = [];
 
 function renderGallery(shots) {
   loadedShots = shots;
-  if (shots.length === 1) {
-    return '<div class="ss-gallery"><div class="ss-main"><img src="' + shots[0] + '" onclick="openLightbox(0)"></div><div class="ss-thumbs"><img src="' + shots[0] + '" class="active" onclick="selectShot(0)"></div></div>';
-  }
+  currentShotIdx = 0;
   var thumbs = shots.map(function(s, i) {
     return '<img src="' + s + '"' + (i === 0 ? ' class="active"' : '') + ' onclick="selectShot(' + i + ')">';
   }).join('');

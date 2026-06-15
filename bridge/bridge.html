@@ -378,7 +378,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.5.2";
+const BRIDGE_VERSION = "2.5.3";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -1424,9 +1424,7 @@ var loadedShots = [];
 
 function renderGallery(shots) {
   loadedShots = shots;
-  if (shots.length === 1) {
-    return '<div class="ss-gallery"><div class="ss-main"><img src="' + shots[0] + '" onclick="openLightbox(0)"></div><div class="ss-thumbs"><img src="' + shots[0] + '" class="active" onclick="selectShot(0)"></div></div>';
-  }
+  currentShotIdx = 0;
   var thumbs = shots.map(function(s, i) {
     return '<img src="' + s + '"' + (i === 0 ? ' class="active"' : '') + ' onclick="selectShot(' + i + ')">';
   }).join('');

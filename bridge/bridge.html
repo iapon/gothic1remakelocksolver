@@ -118,6 +118,10 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .share-drop:hover { border-color:#ffd700; color:#ffd700; }
 .share-drop.has-img { border-style:solid; border-color:#0f0; padding:8px; }
 .share-drop img { max-width:100%; max-height:200px; border-radius:6px; display:block; margin:0 auto; }
+.share-thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.share-thumb { position:relative; }
+.share-thumb img { width:80px; height:60px; object-fit:cover; border-radius:4px; cursor:pointer; }
+.share-thumb .thumb-del { position:absolute; top:-4px; right:-4px; background:#e94560; color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; line-height:1; padding:0; }
 .share-actions { display:flex; gap:8px; justify-content:center; margin-top:16px; }
 .donate-close { text-align: center; margin-top: 12px; }
 
@@ -328,9 +332,9 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <div class="share-popup" id="sharePopup">
   <h3 id="t_save_title">&#128190; Save Recipe</h3>
   <div class="share-drop" id="shareDrop" onclick="document.getElementById('shareFileInput').click()">
-    <span id="t_save_drop">&#128247; Paste (Ctrl+V) or click to attach screenshot</span>
-    <img id="shareDropImg" style="display:none">
-    <input type="file" id="shareFileInput" accept="image/*" style="display:none" onchange="handleShareFile(event)">
+    <span id="t_save_drop">&#128247; Paste (Ctrl+V) or click to attach screenshots</span>
+    <input type="file" id="shareFileInput" accept="image/*" multiple style="display:none" onchange="handleShareFile(event)">
+    <div class="share-thumbs" id="shareThumbs"></div>
   </div>
   <div class="share-actions">
     <button class="btn" onclick="doSave('local')" id="t_save_local">&#128190; Save locally</button>
@@ -364,7 +368,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.4.1";
+const BRIDGE_VERSION = "2.5.0";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -379,7 +383,7 @@ try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch
 
 let communityRecipes = [];
 let currentCommunityId = null;
-let shareScreenshot = null;
+let shareScreenshots = [];
 let shareModalOpen = false;
 
 function compressScreenshot(file) {
@@ -399,36 +403,53 @@ function compressScreenshot(file) {
   });
 }
 
-function showShareImg(b64) {
-  const drop = document.getElementById('shareDrop');
-  const txt = document.getElementById('t_save_drop');
-  const img = document.getElementById('shareDropImg');
-  if (b64) {
-    img.src = b64;
-    img.style.display = 'block';
+function showShareImgs() {
+  var drop = document.getElementById('shareDrop');
+  var txt = document.getElementById('t_save_drop');
+  var thumbs = document.getElementById('shareThumbs');
+  thumbs.innerHTML = '';
+  if (shareScreenshots.length > 0) {
     txt.style.display = 'none';
     drop.classList.add('has-img');
+    shareScreenshots.forEach(function(b64, i) {
+      var div = document.createElement('div');
+      div.className = 'share-thumb';
+      div.innerHTML = '<img src="' + b64 + '" onclick="window.open(this.src)"><button class="thumb-del" onclick="event.stopPropagation();removeShareImg(' + i + ')">&times;</button>';
+      thumbs.appendChild(div);
+    });
   } else {
-    img.src = '';
-    img.style.display = 'none';
     txt.style.display = '';
     drop.classList.remove('has-img');
   }
 }
 
+function removeShareImg(i) {
+  shareScreenshots.splice(i, 1);
+  showShareImgs();
+}
+
+function getRecipeShots(r) {
+  if (r.screenshots && Array.isArray(r.screenshots)) return r.screenshots;
+  if (r.screenshot) return [r.screenshot];
+  return [];
+}
+
 function handleShareFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  compressScreenshot(file).then(b64 => { shareScreenshot = b64; showShareImg(b64); });
+  var files = e.target.files;
+  if (!files || !files.length) return;
+  Array.from(files).forEach(function(file) {
+    compressScreenshot(file).then(function(b64) { shareScreenshots.push(b64); showShareImgs(); });
+  });
+  e.target.value = '';
 }
 
 function handleSharePaste(e) {
   if (!shareModalOpen) return;
-  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-  for (const item of items) {
-    if (item.type.startsWith('image/')) {
+  var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
       e.preventDefault();
-      compressScreenshot(item.getAsFile()).then(b64 => { shareScreenshot = b64; showShareImg(b64); });
+      compressScreenshot(items[i].getAsFile()).then(function(b64) { shareScreenshots.push(b64); showShareImgs(); });
       return;
     }
   }
@@ -437,10 +458,10 @@ function handleSharePaste(e) {
 document.addEventListener('paste', handleSharePaste);
 
 function openSaveModal() {
-  const name = document.getElementById('recipeName').value.trim();
+  var name = document.getElementById('recipeName').value.trim();
   if (!name) { showToast(t('enter_first')); return; }
-  shareScreenshot = null;
-  showShareImg(null);
+  shareScreenshots = [];
+  showShareImgs();
   shareModalOpen = true;
   document.getElementById('shareOverlay').classList.add('open');
   document.getElementById('sharePopup').classList.add('open');
@@ -459,7 +480,8 @@ async function doSave(dest) {
     numPlates, numPositions, center,
     plates: plates.map(p => ({initPin: p.initPin, effects: p.effects.map(e => ({...e}))})),
     steps: solution ? solution.map(s => ({plate: s.plate, dir: s.dir})) : null,
-    screenshot: shareScreenshot || null
+    screenshots: shareScreenshots.length > 0 ? shareScreenshots : null,
+    screenshot: shareScreenshots.length > 0 ? shareScreenshots[0] : null
   };
   if (dest === 'local') {
     let saved = JSON.parse(localStorage.getItem('lockRecipes') || '[]');
@@ -498,7 +520,7 @@ const i18n = {
     recipe_ph: 'Recipe name...',
     save: '\u{1F4BE} Save',
     save_title: '\u{1F4BE} Save Recipe',
-    save_drop: '\u{1F4F7} Paste (Ctrl+V) or click to attach screenshot',
+    save_drop: '📸 Paste (Ctrl+V) or click to attach screenshots',
     save_local: '\u{1F4BE} Save locally',
     save_community: '\u{1F310} Share to community',
     saved_local: n => `${n} saved locally`,
@@ -597,7 +619,7 @@ const i18n = {
     recipe_ph: 'Имя рецепта...',
     save: '\u{1F4BE} Сохранить',
     save_title: '\u{1F4BE} Сохранить рецепт',
-    save_drop: '\u{1F4F7} Вставьте (Ctrl+V) или нажмите для скриншота',
+    save_drop: '📸 Вставьте (Ctrl+V) или нажмите для скриншотов',
     save_local: '\u{1F4BE} Сохранить локально',
     save_community: '\u{1F310} Поделиться с сообществом',
     saved_local: n => `${n} сохранён локально`,
@@ -1251,10 +1273,11 @@ function filterUnified() {
       item.className = 'search-item';
       const info = `${r.numPlates}P / ${r.numPositions || 7}pos`;
       const safe = r.name.replace(/'/g, "\\'");
-      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb">' : '';
+      const firstShot = getRecipeShots(r)[0];
+      const thumb = firstShot ? '<img src="' + firstShot + '" class="si-thumb">' : '';
       item.innerHTML = `${thumb}<span class="si-name" onclick="loadLocalRecipe('${safe}')">${r.name}</span><span class="si-info" style="color:#8ecae6;">&#128190; ${info}</span><span class="si-del" onclick="event.stopPropagation();deleteRecipe('${safe}')">&#10006;</span>`;
-      if (r.screenshot) {
-        item.dataset.ss = r.screenshot;
+      if (firstShot) {
+        item.dataset.ss = firstShot;
         item.addEventListener('mouseenter', showSsPreview);
         item.addEventListener('mousemove', moveSsPreview);
         item.addEventListener('mouseleave', hideSsPreview);
@@ -1266,10 +1289,11 @@ function filterUnified() {
       item.className = 'search-item';
       const info = `${r.numPlates}P / ${r.numPositions}pos`;
       const rid = r.id;
-      const thumb = r.screenshot ? '<img src="' + r.screenshot + '" class="si-thumb">' : '';
+      const firstShot = getRecipeShots(r)[0];
+      const thumb = firstShot ? '<img src="' + firstShot + '" class="si-thumb">' : '';
       item.innerHTML = `${thumb}<span class="si-name" onclick="loadCommunityRecipe('${rid}')">${r.name}</span><span class="si-info" style="color:#0f0;">&#127760; ${info}</span>`;
-      if (r.screenshot) {
-        item.dataset.ss = r.screenshot;
+      if (firstShot) {
+        item.dataset.ss = firstShot;
         item.addEventListener('mouseenter', showSsPreview);
         item.addEventListener('mousemove', moveSsPreview);
         item.addEventListener('mouseleave', hideSsPreview);
@@ -1311,9 +1335,10 @@ function loadLocalRecipe(name) {
   document.getElementById('solutionBox').style.display = 'none';
   if (r.name) document.getElementById('recipeName').value = r.name;
   showRecipeName(r.name);
-  const loaded = document.getElementById('loadedSs');
-  if (r.screenshot) {
-    loaded.innerHTML = '<img src="' + r.screenshot + '" style="max-width:100%;border-radius:6px;cursor:pointer;" onclick="window.open(this.src)">';
+  var loaded = document.getElementById('loadedSs');
+  var shots = getRecipeShots(r);
+  if (shots.length > 0) {
+    loaded.innerHTML = shots.map(function(s) { return '<img src="' + s + '" style="max-width:100%;border-radius:6px;cursor:pointer;margin-bottom:4px;" onclick="window.open(this.src)">'; }).join('');
     loaded.style.display = 'block';
   } else {
     loaded.innerHTML = '';
@@ -1343,8 +1368,9 @@ function loadCommunityRecipe(id) {
   if (r.name) document.getElementById('recipeName').value = r.name;
   showRecipeName(r.name);
   var loaded = document.getElementById('loadedSs');
-  if (r.screenshot) {
-    loaded.innerHTML = '<img src="' + r.screenshot + '" style="max-width:100%;border-radius:6px;cursor:pointer;" onclick="window.open(this.src)">';
+  var shots = getRecipeShots(r);
+  if (shots.length > 0) {
+    loaded.innerHTML = shots.map(function(s) { return '<img src="' + s + '" style="max-width:100%;border-radius:6px;cursor:pointer;margin-bottom:4px;" onclick="window.open(this.src)">'; }).join('');
     loaded.style.display = 'block';
   } else {
     loaded.innerHTML = '';

@@ -194,7 +194,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .ss-preview img { max-width:600px; max-height:600px; border-radius:8px; border:2px solid #ffd700; box-shadow:0 4px 20px rgba(0,0,0,0.8); }
 .ss-gallery { display:flex; flex-direction:column; gap:8px; }
 .ss-main { cursor:pointer; }
-.ss-main img { width:100%; max-width:600px; border-radius:8px; display:block; }
+.ss-main img { width:100%; max-width:600px; max-height:400px; object-fit:contain; border-radius:8px; display:block; }
 .ss-thumbs { display:flex; gap:6px; flex-wrap:wrap; }
 .ss-thumbs img { width:72px; height:54px; object-fit:cover; border-radius:4px; cursor:pointer; opacity:0.5; transition:opacity 0.15s; }
 .ss-thumbs img.active { opacity:1; border:2px solid #ffd700; }
@@ -1203,7 +1203,6 @@ function loadLocalRecipe(name) {
   const shots = getRecipeShots(r);
   if (shots.length > 0) {
     loaded.innerHTML = renderGallery(shots);
-    loaded.dataset.shots = JSON.stringify(shots);
     loaded.style.display = 'block';
   } else {
     loaded.innerHTML = '';
@@ -1236,7 +1235,6 @@ function loadCommunityRecipe(id) {
   const shots = getRecipeShots(r);
   if (shots.length > 0) {
     loaded.innerHTML = renderGallery(shots);
-    loaded.dataset.shots = JSON.stringify(shots);
     loaded.style.display = 'block';
   } else {
     loaded.innerHTML = '';
@@ -1275,10 +1273,13 @@ function hideSsPreview() {
 
 var lightboxShots = [];
 var lightboxIdx = 0;
+var currentShotIdx = 0;
+var loadedShots = [];
 
 function renderGallery(shots) {
+  loadedShots = shots;
   if (shots.length === 1) {
-    return '<div class="ss-gallery"><div class="ss-main"><img src="' + shots[0] + '" onclick="openLightbox(0)"></div></div>';
+    return '<div class="ss-gallery"><div class="ss-main"><img src="' + shots[0] + '" onclick="openLightbox(0)"></div><div class="ss-thumbs"><img src="' + shots[0] + '" class="active" onclick="selectShot(0)"></div></div>';
   }
   var thumbs = shots.map(function(s, i) {
     return '<img src="' + s + '"' + (i === 0 ? ' class="active"' : '') + ' onclick="selectShot(' + i + ')">';
@@ -1289,20 +1290,17 @@ function renderGallery(shots) {
     '</div>';
 }
 
-var currentShotIdx = 0;
 function selectShot(i) {
-  var loaded = document.getElementById('loadedSs');
-  try { lightboxShots = JSON.parse(loaded.dataset.shots || '[]'); } catch(e) { return; }
   currentShotIdx = i;
-  document.getElementById('ssMainImg').src = lightboxShots[i];
+  document.getElementById('ssMainImg').src = loadedShots[i];
+  var loaded = document.getElementById('loadedSs');
   var thumbs = loaded.querySelectorAll('.ss-thumbs img');
   thumbs.forEach(function(t, idx) { t.classList.toggle('active', idx === i); });
 }
 
 function openLightbox(i) {
-  var loaded = document.getElementById('loadedSs');
-  try { lightboxShots = JSON.parse(loaded.dataset.shots || '[]'); } catch(e) { return; }
-  if (!lightboxShots.length) return;
+  if (!loadedShots.length) return;
+  lightboxShots = loadedShots;
   lightboxIdx = i;
   document.getElementById('ssLightboxImg').src = lightboxShots[i];
   document.getElementById('ssLightbox').classList.add('show');

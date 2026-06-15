@@ -192,6 +192,16 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .ss-preview { position:fixed; z-index:400; pointer-events:none; opacity:0; transition:opacity 0.15s; }
 .ss-preview.visible { opacity:1; }
 .ss-preview img { max-width:600px; max-height:600px; border-radius:8px; border:2px solid #ffd700; box-shadow:0 4px 20px rgba(0,0,0,0.8); }
+.ss-gallery { display:flex; flex-direction:column; gap:8px; }
+.ss-main { cursor:pointer; }
+.ss-main img { width:100%; max-width:600px; border-radius:8px; display:block; }
+.ss-thumbs { display:flex; gap:6px; flex-wrap:wrap; }
+.ss-thumbs img { width:72px; height:54px; object-fit:cover; border-radius:4px; cursor:pointer; opacity:0.5; transition:opacity 0.15s; }
+.ss-thumbs img.active { opacity:1; border:2px solid #ffd700; }
+.ss-thumbs img:hover { opacity:0.8; }
+.ss-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:600; align-items:center; justify-content:center; cursor:pointer; }
+.ss-lightbox.show { display:flex; }
+.ss-lightbox img { max-width:90vw; max-height:90vh; border-radius:8px; }
 .search-item .si-del { color: #e74c3c; font-size: 14px; padding: 0 4px; margin-left: 8px; }
 .search-item .si-del:hover { color: #ff6b6b; }
 .search-empty { padding: 12px; text-align: center; color: #555; font-size: 12px; }
@@ -368,7 +378,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.5.0";
+const BRIDGE_VERSION = "2.5.1";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -1370,7 +1380,8 @@ function loadCommunityRecipe(id) {
   var loaded = document.getElementById('loadedSs');
   var shots = getRecipeShots(r);
   if (shots.length > 0) {
-    loaded.innerHTML = shots.map(function(s) { return '<img src="' + s + '" style="max-width:100%;border-radius:6px;cursor:pointer;margin-bottom:4px;" onclick="window.open(this.src)">'; }).join('');
+    loaded.innerHTML = renderGallery(shots);
+    loaded.dataset.shots = JSON.stringify(shots);
     loaded.style.display = 'block';
   } else {
     loaded.innerHTML = '';
@@ -1406,6 +1417,51 @@ function moveSsPreview(e) {
 function hideSsPreview() {
   document.getElementById('ssPreview').classList.remove('visible');
 }
+
+var lightboxShots = [];
+var lightboxIdx = 0;
+var currentShotIdx = 0;
+
+function renderGallery(shots) {
+  if (shots.length === 1) {
+    return '<div class="ss-gallery"><div class="ss-main"><img src="' + shots[0] + '" onclick="openLightbox(0)"></div></div>';
+  }
+  var thumbs = shots.map(function(s, i) {
+    return '<img src="' + s + '"' + (i === 0 ? ' class="active"' : '') + ' onclick="selectShot(' + i + ')">';
+  }).join('');
+  return '<div class="ss-gallery">' +
+    '<div class="ss-main"><img id="ssMainImg" src="' + shots[0] + '" onclick="openLightbox(currentShotIdx)"></div>' +
+    '<div class="ss-thumbs">' + thumbs + '</div>' +
+    '</div>';
+}
+
+function selectShot(i) {
+  var loaded = document.getElementById('loadedSs');
+  try { lightboxShots = JSON.parse(loaded.dataset.shots || '[]'); } catch(e) { return; }
+  currentShotIdx = i;
+  document.getElementById('ssMainImg').src = lightboxShots[i];
+  var thumbs = loaded.querySelectorAll('.ss-thumbs img');
+  thumbs.forEach(function(t, idx) { t.classList.toggle('active', idx === i); });
+}
+
+function openLightbox(i) {
+  var loaded = document.getElementById('loadedSs');
+  try { lightboxShots = JSON.parse(loaded.dataset.shots || '[]'); } catch(e) { return; }
+  if (!lightboxShots.length) return;
+  lightboxIdx = i;
+  document.getElementById('ssLightboxImg').src = lightboxShots[i];
+  document.getElementById('ssLightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('ssLightbox').classList.remove('show');
+}
+document.addEventListener('keydown', function(e) {
+  var lb = document.getElementById('ssLightbox');
+  if (!lb.classList.contains('show')) return;
+  if (e.key === 'Escape') { closeLightbox(); return; }
+  if (e.key === 'ArrowLeft' && lightboxIdx > 0) { openLightbox(lightboxIdx - 1); }
+  if (e.key === 'ArrowRight' && lightboxIdx < lightboxShots.length - 1) { openLightbox(lightboxIdx + 1); }
+});
 
 function resetAll() {
   if (!confirm(t('reset_confirm'))) return;
@@ -1686,5 +1742,6 @@ function renderGuide() {
   <div class="close-guide"><button class="btn btn-sm" onclick="toggleGuide()" id="t_guide_close">Close</button></div>
 </div>
 <div class="ss-preview" id="ssPreview"><img id="ssPreviewImg"></div>
+<div class="ss-lightbox" id="ssLightbox" onclick="closeLightbox()"><img id="ssLightboxImg"></div>
 </body>
 </html>

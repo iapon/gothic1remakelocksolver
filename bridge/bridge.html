@@ -378,7 +378,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const BRIDGE_VERSION = "2.5.4";
+const BRIDGE_VERSION = "2.5.5";
 
 const firebaseConfig = {
   apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
@@ -1483,6 +1483,35 @@ function resetAll() {
   filterUnified();
 }
 
+function parseFirestoreDoc(doc) {
+  var f = doc.fields || {};
+  var recipe = {};
+  recipe.name = f.name ? f.name.stringValue : '';
+  recipe.numPlates = f.numPlates ? parseInt(f.numPlates.integerValue) : 6;
+  recipe.numPositions = f.numPositions ? parseInt(f.numPositions.integerValue) : 7;
+  recipe.center = f.center ? parseInt(f.center.integerValue) : 3;
+  recipe.plates = [];
+  if (f.plates && f.plates.arrayValue && f.plates.arrayValue.values) {
+    f.plates.arrayValue.values.forEach(function(v) {
+      var mf = v.mapValue.fields;
+      var plate = {initPin: parseInt(mf.initPin.integerValue), effects: []};
+      if (mf.effects && mf.effects.arrayValue && mf.effects.arrayValue.values) {
+        mf.effects.arrayValue.values.forEach(function(ev) {
+          var ef = ev.mapValue.fields;
+          plate.effects.push({target: parseInt(ef.target.integerValue), dir: parseInt(ef.dir.integerValue)});
+        });
+      }
+      recipe.plates.push(plate);
+    });
+  }
+  if (f.screenshots && f.screenshots.arrayValue && f.screenshots.arrayValue.values) {
+    recipe.screenshots = f.screenshots.arrayValue.values.map(function(v) { return v.stringValue; });
+  } else if (f.screenshot && f.screenshot.stringValue) {
+    recipe.screenshot = f.screenshot.stringValue;
+  }
+  return recipe;
+}
+
 async function loadCommunity() {
   try {
     const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
@@ -1498,14 +1527,18 @@ applyLang();
 loadPreset();
 filterUnified();
 var urlRid = new URLSearchParams(location.search).get('recipe');
-if (urlRid && db) {
-  db.collection('recipes').doc(urlRid).get().then(function(doc) {
-    if (doc.exists) {
-      var existing = communityRecipes.find(function(x) { return x.id === doc.id; });
-      if (!existing) communityRecipes.unshift({id: doc.id, ...doc.data()});
-      loadCommunityRecipe(doc.id);
-    }
-  }).catch(function() {});
+if (urlRid) {
+  fetch('https://firestore.googleapis.com/v1/projects/gothic-1-remake-lockpiker/databases/(default)/documents/recipes/' + urlRid + '?key=AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo')
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(doc) {
+      if (doc.fields) {
+        var recipe = parseFirestoreDoc(doc);
+        recipe.id = urlRid;
+        communityRecipes.unshift(recipe);
+        loadCommunityRecipe(urlRid);
+      }
+    })
+    .catch(function() {});
 }
 loadCommunity();
 

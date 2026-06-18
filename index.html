@@ -1353,12 +1353,17 @@ async function loadCommunity() {
 applyLang();
 loadPreset();
 filterUnified();
-loadCommunity().then(function() {
-  var rid = new URLSearchParams(location.search).get('recipe');
-  if (rid) {
-    loadCommunityRecipe(rid);
-  }
-});
+var urlRid = new URLSearchParams(location.search).get('recipe');
+if (urlRid && db) {
+  db.collection('recipes').doc(urlRid).get().then(function(doc) {
+    if (doc.exists) {
+      var existing = communityRecipes.find(function(x) { return x.id === doc.id; });
+      if (!existing) communityRecipes.unshift({id: doc.id, ...doc.data()});
+      loadCommunityRecipe(doc.id);
+    }
+  }).catch(function() {});
+}
+loadCommunity();
 
 function toggleGuide() {
   const popup = document.getElementById('guidePopup');

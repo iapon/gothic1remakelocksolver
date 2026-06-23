@@ -342,19 +342,10 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
   <div class="close-guide"><button class="btn btn-sm" onclick="toggleGuide()" id="t_guide_close">Close</button></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo",
-  authDomain: "gothic-1-remake-lockpiker.firebaseapp.com",
-  projectId: "gothic-1-remake-lockpiker",
-  storageBucket: "gothic-1-remake-lockpiker.firebasestorage.app",
-  messagingSenderId: "970434471850",
-  appId: "1:970434471850:web:4457e60a28304337b5add3"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const FB_PROJECT = 'gothic-1-remake-lockpiker';
+const FB_KEY = 'AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo';
+const FB_BASE = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents/recipes';
 
 let communityRecipes = [];
 let currentCommunityId = null;
@@ -469,9 +460,12 @@ async function doSave(dest) {
   } else {
     const existing = communityRecipes.find(r => r.name.toLowerCase() === name.toLowerCase());
     if (existing) { showToast(t('exists')(name)); return; }
-    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
     try {
-      await db.collection('recipes').add(data);
+      await fetch(FB_BASE + '?key=' + FB_KEY, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(toFirestoreFields(data))
+      });
       showToast(t('shared')(name));
       closeShareModal();
       loadCommunity();
@@ -1368,10 +1362,87 @@ function parseFirestoreDoc(doc) {
   return recipe;
 }
 
+function toFirestoreFields(data) {
+  var fields = {};
+  fields.name = {stringValue: data.name};
+  fields.numPlates = {integerValue: String(data.numPlates)};
+  fields.numPositions = {integerValue: String(data.numPositions)};
+  fields.center = {integerValue: String(data.center)};
+  fields.plates = {arrayValue: {values: data.plates.map(function(p) {
+    return {mapValue: {fields: {
+      initPin: {integerValue: String(p.initPin)},
+      effects: {arrayValue: {values: p.effects.map(function(e) {
+        return {mapValue: {fields: {
+          target: {integerValue: String(e.target)},
+          dir: {integerValue: String(e.dir)}
+        }}};
+      })}}
+    }}};
+  })}};
+  if (data.screenshots && data.screenshots.length > 0) {
+    fields.screenshots = {arrayValue: {values: data.screenshots.map(function(s) { return {stringValue: s}; })}};
+    fields.screenshot = {stringValue: data.screenshots[0]};
+  } else if (data.screenshot) {
+    fields.screenshot = {stringValue: data.screenshot};
+  }
+  if (data.steps) {
+    fields.steps = {arrayValue: {values: data.steps.map(function(s) {
+      return {mapValue: {fields: {
+        plate: {integerValue: String(s.plate)},
+        dir: {integerValue: String(s.dir)}
+      }}};
+    })}};
+  }
+  fields.createdAt = {timestampValue: new Date().toISOString()};
+  return {fields: fields};
+}
+
+function parseFirestoreDoc(doc) {
+  var f = doc.fields || {};
+  var recipe = {};
+  recipe.name = f.name ? f.name.stringValue : '';
+  recipe.numPlates = f.numPlates ? parseInt(f.numPlates.integerValue) : 6;
+  recipe.numPositions = f.numPositions ? parseInt(f.numPositions.integerValue) : 7;
+  recipe.center = f.center ? parseInt(f.center.integerValue) : 3;
+  recipe.plates = [];
+  if (f.plates && f.plates.arrayValue && f.plates.arrayValue.values) {
+    f.plates.arrayValue.values.forEach(function(v) {
+      var mf = v.mapValue.fields;
+      var plate = {initPin: parseInt(mf.initPin.integerValue), effects: []};
+      if (mf.effects && mf.effects.arrayValue && mf.effects.arrayValue.values) {
+        mf.effects.arrayValue.values.forEach(function(ev) {
+          var ef = ev.mapValue.fields;
+          plate.effects.push({target: parseInt(ef.target.integerValue), dir: parseInt(ef.dir.integerValue)});
+        });
+      }
+      recipe.plates.push(plate);
+    });
+  }
+  if (f.screenshots && f.screenshots.arrayValue && f.screenshots.arrayValue.values) {
+    recipe.screenshots = f.screenshots.arrayValue.values.map(function(v) { return v.stringValue; });
+  } else if (f.screenshot && f.screenshot.stringValue) {
+    recipe.screenshot = f.screenshot.stringValue;
+  }
+  return recipe;
+}
+
 async function loadCommunity() {
   try {
-    const snap = await db.collection('recipes').orderBy('createdAt', 'desc').get();
-    communityRecipes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    communityRecipes = [];
+    var pageToken = '';
+    do {
+      var url = FB_BASE + '?key=' + FB_KEY + '&pageSize=50';
+      if (pageToken) url += '&pageToken=' + pageToken;
+      var resp = await fetch(url);
+      var data = await resp.json();
+      var docs = data.documents || [];
+      docs.forEach(function(doc) {
+        var recipe = parseFirestoreDoc(doc);
+        recipe.id = doc.name.split('/').pop();
+        communityRecipes.push(recipe);
+      });
+      pageToken = data.nextPageToken || '';
+    } while (pageToken);
     filterUnified();
   } catch(e) {
     console.error('Community load error', e);
@@ -1395,8 +1466,9 @@ if (urlRid) {
       }
     })
     .catch(function() {});
+} else {
+  loadCommunity();
 }
-loadCommunity();
 
 function toggleGuide() {
   const popup = document.getElementById('guidePopup');

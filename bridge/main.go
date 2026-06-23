@@ -25,6 +25,7 @@ type KeyConfig struct {
 	KeyDir1 uint16 `json:"keyDir1"`
 	KeyDir2 uint16 `json:"keyDir2"`
 	Delay   int    `json:"delay"`
+	Method  int    `json:"method"`
 }
 
 type Effect struct {
@@ -82,7 +83,13 @@ var (
 	procGetWindowTextW  = user32.NewProc("GetWindowTextW")
 	procIsWindowVisible = user32.NewProc("IsWindowVisible")
 	procPostMessageW    = user32.NewProc("PostMessageW")
+	procSendMessageW    = user32.NewProc("SendMessageW")
 	procMapVirtualKeyW  = user32.NewProc("MapVirtualKeyW")
+	procSendInput       = user32.NewProc("SendInput")
+	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+	procAttachThreadInput        = user32.NewProc("AttachThreadInput")
+	procGetCurrentThreadId       = user32.NewProc("GetCurrentThreadId")
+	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
 
 	targetWindowMu sync.Mutex
 	targetWindows  []WindowInfo
@@ -185,6 +192,57 @@ func pressKeyForeground(vk uint16) {
 	procKeybdEvent.Call(uintptr(vk), 0, 0, 0)
 	time.Sleep(30 * time.Millisecond)
 	procKeybdEvent.Call(uintptr(vk), 0, 0x0002, 0)
+	time.Sleep(30 * time.Millisecond)
+}
+
+type tagINPUT struct {
+	Type uint32
+	Mi   [16]byte
+}
+
+func pressKeySendInput(hwnd uintptr, vk uint16) {
+	targetThread, _, _ := procGetWindowThreadProcessId.Call(hwnd, 0)
+	myThread, _, _ := procGetCurrentThreadId.Call()
+	procAttachThreadInput.Call(myThread, targetThread, 1)
+
+	scanCode, _, _ := procMapVirtualKeyW.Call(uintptr(vk), 0)
+
+	var down tagINPUT
+	down.Type = 1 // INPUT_KEYBOARD
+	*(*uint16)(unsafe.Pointer(&down.Mi[0])) = vk
+	*(*uint16)(unsafe.Pointer(&down.Mi[2])) = uint16(scanCode)
+	*(*uint32)(unsafe.Pointer(&down.Mi[8])) = 0 // flags: keydown
+
+	var up tagINPUT
+	up.Type = 1
+	*(*uint16)(unsafe.Pointer(&up.Mi[0])) = vk
+	*(*uint16)(unsafe.Pointer(&up.Mi[2])) = uint16(scanCode)
+	*(*uint32)(unsafe.Pointer(&up.Mi[8])) = 0x0002 // KEYEVENTF_KEYUP
+
+	inputs := []tagINPUT{down, up}
+	procSendInput.Call(2, uintptr(unsafe.Pointer(&inputs[0])), uintptr(unsafe.Sizeof(tagINPUT{})))
+
+	procAttachThreadInput.Call(myThread, targetThread, 0)
+	time.Sleep(30 * time.Millisecond)
+}
+
+func pressKeySendMessage(hwnd uintptr, vk uint16) {
+	scanCode, _, _ := procMapVirtualKeyW.Call(uintptr(vk), 0)
+	lParamDown := uintptr(1 | (scanCode << 16))
+	lParamUp := uintptr(1 | (scanCode << 16) | (1<<30) | (1<<31))
+	procSendMessageW.Call(hwnd, 0x0100, uintptr(vk), lParamDown)
+	time.Sleep(30 * time.Millisecond)
+	procSendMessageW.Call(hwnd, 0x0101, uintptr(vk), lParamUp)
+	time.Sleep(30 * time.Millisecond)
+}
+
+func pressKeySys(hwnd uintptr, vk uint16) {
+	scanCode, _, _ := procMapVirtualKeyW.Call(uintptr(vk), 0)
+	lParamDown := uintptr(1 | (scanCode << 16))
+	lParamUp := uintptr(1 | (scanCode << 16) | (1<<30) | (1<<31))
+	procPostMessageW.Call(hwnd, 0x0104, uintptr(vk), lParamDown)
+	time.Sleep(30 * time.Millisecond)
+	procPostMessageW.Call(hwnd, 0x0105, uintptr(vk), lParamUp)
 	time.Sleep(30 * time.Millisecond)
 }
 
@@ -426,7 +484,16 @@ func executeSteps(req ExecuteRequest) {
 
 	press := func(vk uint16) {
 		if hasHwnd {
-			pressKeyTo(hwnd, vk)
+			switch c.Method {
+			case 1:
+				pressKeySendInput(hwnd, vk)
+			case 2:
+				pressKeySendMessage(hwnd, vk)
+			case 3:
+				pressKeySys(hwnd, vk)
+			default:
+				pressKeyTo(hwnd, vk)
+			}
 		} else {
 			pressKeyForeground(vk)
 		}
@@ -743,7 +810,7 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
-const AppVersion = "2.5.5"
+const AppVersion = "2.6.0"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
@@ -812,6 +879,7 @@ func main() {
 		KeyDir1: 0x41,
 		KeyDir2: 0x44,
 		Delay:   300,
+		Method:  0,
 	}
 	loadConfig()
 

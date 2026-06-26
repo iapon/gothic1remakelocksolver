@@ -720,8 +720,8 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	sendEvent("status", "installing")
 
 	batPath := filepath.Join(exeDir, "update.bat")
-	bat := fmt.Sprintf("@echo off\r\nping -n 3 127.0.0.1 >nul\r\ncopy /y \"%s\" \"%s\"\r\ndel \"%s\"\r\nstart \"\" \"%s\"\r\ndel \"%s\"\r\n",
-		tmpPath, exePath, tmpPath, exePath, batPath)
+	bat := fmt.Sprintf("@echo off\r\nping -n 3 127.0.0.1 >nul\r\n:retry\r\ncopy /y \"%s\" \"%s\"\r\nif errorlevel 1 (\r\n  ping -n 2 127.0.0.1 >nul\r\n  goto retry\r\n)\r\ndel \"%s\"\r\nstart \"\" \"%s\"\r\ndel \"%%~f0\"\r\n",
+		tmpPath, exePath, tmpPath, exePath)
 	os.WriteFile(batPath, []byte(bat), 0644)
 
 	cmd := exec.Command("cmd", "/c", batPath)
@@ -810,7 +810,7 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
-const AppVersion = "2.6.1"
+const AppVersion = "2.6.2"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
@@ -832,8 +832,9 @@ func jsCheckUpdate() map[string]interface{} {
 		return map[string]interface{}{"ok": false, "error": err.Error()}
 	}
 	remoteVer := strings.TrimPrefix(rel.TagName, "v")
+	log.Printf("[UPDATE] local=%s remote=%s localNum=%d remoteNum=%d", AppVersion, remoteVer, verToNum(AppVersion), verToNum(remoteVer))
 	if verToNum(remoteVer) <= verToNum(AppVersion) {
-		return map[string]interface{}{"ok": true, "update": false}
+		return map[string]interface{}{"ok": true, "update": false, "local": AppVersion, "remote": remoteVer}
 	}
 	var exeURL string
 	for _, a := range rel.Assets {

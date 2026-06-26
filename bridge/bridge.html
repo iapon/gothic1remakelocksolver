@@ -90,6 +90,9 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 .btn-dir { padding: 4px 10px; font-size: 12px; min-width: 35px; }
 
 .toast { position: fixed; bottom: 20px; right: 20px; background: #0f3460; border: 1px solid #00d4ff; color: #e0e0e0; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 999; font-size: 14px; display: none; }
+.community-loader { display:none; align-items:center; gap:8px; padding:4px 0; font-size:12px; color:#8ecae6; }
+.community-loader.show { display:inline-flex; }
+.community-loader .cl-spinner { width:12px; height:12px; border:2px solid #0f3460; border-top-color:#00d4ff; border-radius:50%; animation:ub-spin 0.6s linear infinite; }
 
 .step-counter { color: #00d4ff; font-weight: bold; font-size: 15px; padding: 0 8px; min-width: 60px; text-align: center; }
 .step-move { color: #ffd700; font-size: 14px; font-weight: 600; min-width: 140px; }
@@ -282,6 +285,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
             <div class="search-dropdown" id="unifiedDropdown"></div>
           </div>
           <button class="btn btn-sm" onclick="loadCommunity()" id="t_refresh" style="width:25%;">&#8635; <span id="t_refresh_label">Refresh</span></button>
+          <span class="community-loader" id="communityLoader"><span class="cl-spinner"></span><span id="loaderText">Loading...</span></span>
         </div>
       </div>
       <div id="loadedSs" style="display:none;max-width:600px;flex-shrink:0;"></div>
@@ -385,7 +389,7 @@ h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; text-shadow: 0 0 1
 <div class="toast" id="toast"></div>
 
 <script>
-const BRIDGE_VERSION = "2.6.0";
+const BRIDGE_VERSION = "2.6.1";
 const FB_PROJECT = 'gothic-1-remake-lockpiker';
 const FB_KEY = 'AIzaSyABGjHFV-5lgA6A-c_XuKmqN6ZpR0VyASo';
 const FB_BASE = 'https://firestore.googleapis.com/v1/projects/' + FB_PROJECT + '/databases/(default)/documents/recipes';
@@ -570,6 +574,7 @@ const i18n = {
     no_recipes: 'No saved recipes',
     no_matches: 'No matches',
     no_community: 'No community recipes yet',
+    loading_recipes: 'Loading',
     enter_first: 'Enter a recipe name first',
     exists: (n) => `"${n}" already exists in community`,
     shared: (n) => `Shared: ${n}`,
@@ -670,6 +675,7 @@ const i18n = {
     no_recipes: 'Нет сохранённых рецептов',
     no_matches: 'Ничего не найдено',
     no_community: 'Пока нет рецептов сообщества',
+    loading_recipes: 'Загрузка',
     enter_first: 'Сначала введите имя рецепта',
     exists: (n) => `"${n}" уже есть в сообществе`,
     shared: (n) => `Опубликовано: ${n}`,
@@ -1553,9 +1559,14 @@ function parseFirestoreDoc(doc) {
 
 async function loadCommunity() {
   try {
+    var loader = document.getElementById('communityLoader');
+    var loaderText = document.getElementById('loaderText');
+    loader.classList.add('show');
     communityRecipes = [];
+    filterUnified();
     var pageToken = '';
     do {
+      loaderText.textContent = t('loading_recipes') + ' ' + communityRecipes.length;
       var url = FB_BASE + '?key=' + FB_KEY + '&pageSize=50';
       if (pageToken) url += '&pageToken=' + pageToken;
       var resp = await fetch(url);
@@ -1566,11 +1577,14 @@ async function loadCommunity() {
         recipe.id = doc.name.split('/').pop();
         communityRecipes.push(recipe);
       });
+      filterUnified();
       pageToken = data.nextPageToken || '';
     } while (pageToken);
-    filterUnified();
+    loaderText.textContent = communityRecipes.length + ' recipes';
+    setTimeout(function() { loader.classList.remove('show'); }, 2000);
   } catch(e) {
     console.error('Community load error', e);
+    document.getElementById('communityLoader').classList.remove('show');
   }
 }
 

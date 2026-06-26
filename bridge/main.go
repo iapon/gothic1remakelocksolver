@@ -810,7 +810,7 @@ func jsGetExecStatus() map[string]interface{} {
 	}
 }
 
-const AppVersion = "2.6.0"
+const AppVersion = "2.6.1"
 
 type githubRelease struct {
 	TagName string `json:"tag_name"`
